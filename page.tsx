@@ -1,283 +1,208 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import Image from 'next/image'; // ✅ استيراد مكون الصورة المحسّن
+import { RefreshCw, Calendar } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase-server';
-import { formatPrice, formatChange, formatRelativeTime } from '@/lib/format';
-import { SITE_NAME } from '@/lib/env';
+import { formatRelativeTime } from '@/lib/format';
+import { SITE_URL, SITE_NAME } from '@/lib/env';
+import BackButton from '@/components/BackButton';
+import { CATEGORY_META, getCategoryMeta, CategoryKey } from '@/lib/categories'; // ✅ استيراد مشترك
 
-type NewsArticle = {
-  title_ar: string;
-  category: string;
-  published_at: string;
-  slug?: string | null;
+export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: 'أخبار الاقتصاد في سوريا | الليرة عملتنا',
+  description: 'آخر الأخبار الاقتصادية والمالية في سوريا: أسعار، قرارات، تحليلات - من مصادر موثوقة مثل سانا والاقتصاد السوري',
+  keywords: ['أخبار سوريا', 'اقتصاد سوريا', 'أسعار', 'قرارات مالية', 'تحليلات'],
+  alternates: { canonical: `${SITE_URL}/news` },
+  openGraph: {
+    title: 'الأخبار | الليرة عملتنا',
+    description: 'آخر الأخبار الاقتصادية في سوريا - مصادر موثوقة',
+    url: `${SITE_URL}/news`,
+    type: 'website',
+  },
 };
 
-function PriceCard({ title, icon, price, change, href }: {
-  title: string;
-  icon: string;
-  price: string;
-  change: { text: string; color: string };
-  href: string;
-}) {
-  return (
-    <Link href={href} className="block min-w-[160px] snap-start">
-      <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-2xl" aria-hidden="true">{icon}</span>
-          <span className="text-xs text-muted-foreground">{title}</span>
-        </div>
-        
-        <div className="space-y-1">
-          <p className="text-xl font-bold tracking-tight">{price}</p>
-          <div className={`flex items-center gap-1 text-xs font-medium ${change.color}`}>
-            {change.text.includes('📈') ? <TrendingUp className="h-3 w-3" /> : 
-             change.text.includes('📉') ? <TrendingDown className="h-3 w-3" /> : 
-             <Minus className="h-3 w-3" />}
-            {change.text}
-          </div>
-        </div>
-        
-        <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-          <span>التفاصيل</span>
-          <ArrowLeft className="h-3 w-3" />
-        </div>
-      </div>
-    </Link>
-  );
-}
+type NewsArticle = {
+  id: string;
+  title_ar: string;
+  slug: string;
+  summary: string;
+  category: CategoryKey;
+  published_at: string;
+  image_url: string | null;
+  source_name: string;
+};
 
-function NewsCard({ title, category, time }: {
-  title: string;
-  category: string;
-  time: string;
-}) {
-  const categoryColors: Record<string, string> = {
-    economy: 'bg-blue-500/10 text-blue-400',
-    fuel: 'bg-orange-500/10 text-orange-400',
-    electricity: 'bg-yellow-500/10 text-yellow-400',
-    crypto: 'bg-purple-500/10 text-purple-400',
-    gold: 'bg-amber-500/10 text-amber-400',
-  };
-
-  return (
-    <article className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${categoryColors[category] || 'bg-muted text-muted-foreground'}`}>
-            {category === 'economy' ? 'اقتصادي' : 
-             category === 'fuel' ? 'محروقات' : 
-             category === 'electricity' ? 'كهرباء' : 
-             category === 'crypto' ? 'كريبتو' : 'ذهب'}
-          </span>
-          <span className="text-[10px] text-muted-foreground">{time}</span>
-        </div>
-        <h3 className="text-sm font-medium line-clamp-2 leading-snug">{title}</h3>
-      </div>
-      <ArrowLeft className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-    </article>
-  );
-}
-
-// ✅ جلب البيانات من الخادم - استخراج .data من الـ responses
-async function getMainData() {
+async function getNewsData() {
   const supabase = createServerSupabase();
   
-  const [usdRes, goldRes, btcRes] = await Promise.all([
-    supabase.from('exchange_rates').select('buy_price, change_24h, fetched_at').eq('base_currency', 'USD').eq('target_currency', 'SYP').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, price_syp, change_24h, fetched_at').eq('asset_code', 'XAU').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, change_24h, fetched_at').eq('asset_code', 'BTC').eq('is_latest', true).maybeSingle(),
-  ]);
-
-  const { data: news } = await supabase
+  const { data: articles, error } = await supabase
     .from('news_articles')
-    .select('title_ar, category, published_at, slug')
+    .select('id, title_ar, slug, summary, category, published_at, image_url, source_name')
     .order('published_at', { ascending: false })
-    .limit(5);
+    .limit(50);
 
-  return { 
-    usd: usdRes.data, 
-    gold: goldRes.data, 
-    btc: btcRes.data, 
-    news 
-  };
+  if (error) throw error;
+  return { articles: (articles as NewsArticle[] | null) ?? [] };
 }
+function NewsCard({ article }: { article: NewsArticle }) {
+  const meta = getCategoryMeta(article.category);
+  
+  return (
+    <Link href={`/news/${article.slug}`} className="block group">
+      <article className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition flex gap-4">
+        {/* ✅ صورة محسّنة مع Next.js Image */}
+        <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg overflow-hidden relative">
+          {article.image_url ? (
+            <Image
+              src={article.image_url}
+              alt={article.title_ar}
+              fill
+              className="object-cover group-hover:scale-105 transition"
+              sizes="(max-width: 768px) 80px, 120px"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              <span aria-hidden="true">{meta.icon}</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${meta.color}`}>
+              {meta.label}
+            </span>
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {formatRelativeTime(article.published_at)}
+            </span>
+          </div>
+          
+          <h3 className="font-bold text-sm leading-snug line-clamp-2 group-hover:text-primary transition">
+            {article.title_ar}
+          </h3>
+          
+          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+            {article.summary}
+          </p>
+          
+          <p className="text-[10px] text-muted-foreground mt-2">
+            المصدر: {article.source_name}
+          </p>
+        </div>
+      </article>
+    </Link>
+  );}
 
-async function MainContent() {
-  const { usd, gold, btc, news } = await getMainData();
-  const lastUpdate = usd?.fetched_at || gold?.fetched_at || btc?.fetched_at;
+async function NewsContent() {
+  const { articles } = await getNewsData();
+
+  if (!articles.length) {
+    return (
+      <div className="text-center py-12">
+        <RefreshCw className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-3" />
+        <p className="text-muted-foreground">لا توجد أخبار متوفرة حالياً</p>
+      </div>
+    );
+  }
+
+  const categories = [...new Set(articles.map(a => a.category))];
 
   return (
     <div className="container mx-auto px-4 py-4 space-y-6">
       
-      {lastUpdate && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
-          <span>🟢 محدث {formatRelativeTime(lastUpdate)}</span>
-          <span className="hidden sm:inline">البيانات من مصادر موثوقة</span>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">آخر الأخبار</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {articles.length} خبر • محدّث {formatRelativeTime(articles[0].published_at)}
+          </p>
         </div>
-      )}
-
-      <section aria-labelledby="quick-prices">
-        <h2 id="quick-prices" className="sr-only">أسعار سريعة</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-          
-          {usd ? (
-            <PriceCard
-              title="دولار / ليرة"
-              icon="💵"
-              price={formatPrice(usd.buy_price, 'SYP')}
-              change={formatChange(usd.change_24h || 0)}
-              href="/prices/currency"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {gold?.price_syp ? (
-            <PriceCard
-              title="ذهب عيار 21"
-              icon="🥇"
-              price={formatPrice((gold.price_syp / 31.1035) * 0.875, 'SYP')}
-              change={formatChange(gold.change_24h || 0)}
-              href="/prices/gold"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {btc ? (
-            <PriceCard
-              title="بيتكوين"
-              icon="₿"
-              price={formatPrice(btc.price_usd, 'USD')}
-              change={formatChange(btc.change_24h || 0)}
-              href="/prices/crypto"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          <Link href="/prices/fuel" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">🛢️</span>
-                <span className="text-xs text-muted-foreground">محروقات</span>
-              </div>
-              <p className="text-sm text-muted-foreground">أسعار يدوية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/prices/electricity" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">⚡</span>
-                <span className="text-xs text-muted-foreground">كهرباء</span>
-              </div>
-              <p className="text-sm text-muted-foreground">تعرفة رسمية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-        </div>
-      </section>
-
-      <section aria-labelledby="latest-news">
-        <div className="flex items-center justify-between mb-3">
-          <h2 id="latest-news" className="font-bold text-lg">آخر الأخبار</h2>
-          <Link href="/news" className="text-xs text-primary hover:underline">عرض الكل</Link>
-        </div>
-        
-        <div className="bg-card rounded-xl border border-muted divide-y divide-muted">
-          {news?.map((article: NewsArticle) => (
-            <Link 
-              key={article.slug || article.title_ar}
-              href={`/news/${article.slug || 'news'}`}
-            >
-              <NewsCard
-                title={article.title_ar}
-                category={article.category}
-                time={formatRelativeTime(article.published_at)}
-              />
-            </Link>
-          )) || (
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="p-3 flex gap-3 animate-pulse">
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-muted rounded w-20" />
-                  <div className="h-4 bg-muted rounded w-full" />
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                </div>
-                <div className="h-4 w-4 bg-muted rounded mt-1" />
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground text-center leading-relaxed">
-        الأسعار المعروضة استرشادية وغير ملزمة قانونياً. 
-        نعمل على تحديث البيانات كل 5 دقائق من مصادر موثوقة.
+        <BackButton />
       </div>
-    </div>
-  );
-}
 
-export default function Home() {
-  return (
-    <>
+      {/* فئات الأخبار */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <Link 
+          href="/news" 
+          className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-background whitespace-nowrap"
+        >
+          الكل
+        </Link>
+        {categories.map((cat) => {
+          const meta = getCategoryMeta(cat);
+          return (
+            <Link
+              key={cat}
+              href={`/news?category=${cat}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-muted hover:border-primary/50 transition ${meta.color}`}
+            >
+              {meta.label}
+            </Link>
+          );
+        })}
+      </div>
+      <div className="space-y-3">
+        {articles.map((article) => (
+          <NewsCard key={article.id} article={article} />
+        ))}
+      </div>
+
+      {/* Schema.org */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: 'الرئيسية | ' + SITE_NAME,
-            description: 'أسعار الدولار، الذهب، والمحروقات في سوريا بشكل لحظي',
+            '@type': 'Blog',
+            name: 'أخبار الاقتصاد في سوريا',
+            description: 'آخر الأخبار الاقتصادية والمالية في سوريا',
             publisher: { '@type': 'Organization', name: SITE_NAME },
+            blogPost: articles.slice(0, 10).map((a, i) => ({
+              '@type': 'BlogPosting',
+              headline: a.title_ar,
+              description: a.summary,
+              datePublished: a.published_at,
+              url: `${SITE_URL}/news/${a.slug}`,
+              image: a.image_url || undefined,
+              author: { '@type': 'Organization', name: a.source_name },
+            })),
           }),
         }}
       />
-      
-      <Suspense fallback={
-        <div className="container mx-auto px-4 py-8 space-y-6">
-          <div className="h-8 bg-muted rounded w-48 animate-pulse" />
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="min-w-[160px] bg-card rounded-xl p-4 border border-muted animate-pulse">
-                <div className="h-4 bg-muted rounded w-16 mb-3" />
-                <div className="h-6 bg-muted rounded w-20 mb-2" />
-                <div className="h-3 bg-muted rounded w-12" />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-3">
-            <div className="h-5 bg-muted rounded w-32 animate-pulse" />
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-card rounded-lg border border-muted animate-pulse" />
-            ))}
-          </div>
+    </div>
+  );
+}
+
+export default function NewsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        <div className="h-8 bg-muted rounded w-32 animate-pulse" />
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-8 w-16 bg-muted rounded-full animate-pulse" />
+          ))}
         </div>
-      }>
-        <MainContent />
-      </Suspense>
-    </>
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="bg-card rounded-xl p-4 border border-muted animate-pulse flex gap-4">
+              <div className="w-20 h-20 bg-muted rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-muted rounded w-24" />
+                <div className="h-4 bg-muted rounded w-full" />                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-3 bg-muted rounded w-20" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    }>
+      <NewsContent />
+    </Suspense>
   );
 }
