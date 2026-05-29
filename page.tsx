@@ -1,283 +1,247 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { RefreshCw, Zap, Calendar, FileText } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase-server';
-import { formatPrice, formatChange, formatRelativeTime } from '@/lib/format';
-import { SITE_NAME } from '@/lib/env';
+import { formatPrice, formatRelativeTime, formatNumber } from '@/lib/format';
+import { SITE_URL } from '@/lib/env';
+import BackButton from '@/components/BackButton';
 
-type NewsArticle = {
-  title_ar: string;
-  category: string;
-  published_at: string;
-  slug?: string | null;
+export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: 'تعرفة الكهرباء في سوريا | الليرة عملتنا',
+  description: 'أسعار شرائح الكهرباء: منزلي أقل من 300 كيلوواط، منزلي أكثر من 300، تجاري، وصناعي - أسعار رسمية محدثة',
+  keywords: ['تعرفة الكهرباء سوريا', 'شرائح الكهرباء', 'كهرباء منزلي', 'كهرباء تجاري', 'كيلوواط'],
+  alternates: { canonical: `${SITE_URL}/prices/electricity` },
+  openGraph: {
+    title: 'الكهرباء | الليرة عملتنا',
+    description: 'تعرفة الكهرباء في سوريا حسب الشرائح - أسعار رسمية',
+    url: `${SITE_URL}/prices/electricity`,
+    type: 'website',
+  },
 };
 
-function PriceCard({ title, icon, price, change, href }: {
-  title: string;
-  icon: string;
-  price: string;
-  change: { text: string; color: string };
-  href: string;
-}) {
-  return (
-    <Link href={href} className="block min-w-[160px] snap-start">
-      <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-2xl" aria-hidden="true">{icon}</span>
-          <span className="text-xs text-muted-foreground">{title}</span>
-        </div>
-        
-        <div className="space-y-1">
-          <p className="text-xl font-bold tracking-tight">{price}</p>
-          <div className={`flex items-center gap-1 text-xs font-medium ${change.color}`}>
-            {change.text.includes('📈') ? <TrendingUp className="h-3 w-3" /> : 
-             change.text.includes('📉') ? <TrendingDown className="h-3 w-3" /> : 
-             <Minus className="h-3 w-3" />}
-            {change.text}
-          </div>
-        </div>
-        
-        <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-          <span>التفاصيل</span>
-          <ArrowLeft className="h-3 w-3" />
-        </div>
-      </div>
-    </Link>
-  );
-}
+type ElectricityTariff = {
+  id: string;
+  tier_key: 'residential_under_300' | 'residential_over_300' | 'commercial' | 'industrial';
+  tier_name_ar: string;
+  price_per_kwh: number;
+  currency: 'SYP' | 'USD';
+  effective_from: string;
+  effective_to: string | null;
+  is_active: boolean;
+  updated_at: string;
+  source_reference: string | null;
+};
 
-function NewsCard({ title, category, time }: {
-  title: string;
-  category: string;
-  time: string;
-}) {
-  const categoryColors: Record<string, string> = {
-    economy: 'bg-blue-500/10 text-blue-400',
-    fuel: 'bg-orange-500/10 text-orange-400',
-    electricity: 'bg-yellow-500/10 text-yellow-400',
-    crypto: 'bg-purple-500/10 text-purple-400',
-    gold: 'bg-amber-500/10 text-amber-400',
-  };
+const TIER_META: Record<ElectricityTariff['tier_key'], { icon: string; color: string; desc: string }> = {
+  residential_under_300: { icon: '🏠', color: 'bg-green-500/10 text-green-400', desc: 'تعرفة مدعومة' },
+  residential_over_300: { icon: '🏠', color: 'bg-yellow-500/10 text-yellow-400', desc: 'تعرفة عادية' },
+  commercial: { icon: '🏢', color: 'bg-blue-500/10 text-blue-400', desc: 'قطاع تجاري' },
+  industrial: { icon: '🏭', color: 'bg-purple-500/10 text-purple-400', desc: 'قطاع صناعي' },
+};
 
-  return (
-    <article className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${categoryColors[category] || 'bg-muted text-muted-foreground'}`}>
-            {category === 'economy' ? 'اقتصادي' : 
-             category === 'fuel' ? 'محروقات' : 
-             category === 'electricity' ? 'كهرباء' : 
-             category === 'crypto' ? 'كريبتو' : 'ذهب'}
-          </span>
-          <span className="text-[10px] text-muted-foreground">{time}</span>
-        </div>
-        <h3 className="text-sm font-medium line-clamp-2 leading-snug">{title}</h3>
-      </div>
-      <ArrowLeft className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-    </article>
-  );
-}
+// ✅ تنسيق التاريخ بأمان للسيرفر (مع خيارات صريحة)
+const formatDateAR = (date: string | Date) => {
+  try {
+    return new Date(date).toLocaleDateString('ar-SY', {
+      year: 'numeric',
+      month: 'long',      day: 'numeric',
+    });
+  } catch {
+    // Fallback في حال عدم دعم locale على السيرفر
+    return new Date(date).toISOString().split('T')[0];
+  }
+};
 
-// ✅ جلب البيانات من الخادم - استخراج .data من الـ responses
-async function getMainData() {
+async function getElectricityData() {
   const supabase = createServerSupabase();
   
-  const [usdRes, goldRes, btcRes] = await Promise.all([
-    supabase.from('exchange_rates').select('buy_price, change_24h, fetched_at').eq('base_currency', 'USD').eq('target_currency', 'SYP').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, price_syp, change_24h, fetched_at').eq('asset_code', 'XAU').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, change_24h, fetched_at').eq('asset_code', 'BTC').eq('is_latest', true).maybeSingle(),
-  ]);
+  const { data: tariffs, error } = await supabase
+    .from('electricity_tariffs')
+    .select('*')
+    .eq('is_active', true)
+    .eq('currency', 'SYP')
+    .order('tier_key');
 
-  const { data: news } = await supabase
-    .from('news_articles')
-    .select('title_ar, category, published_at, slug')
-    .order('published_at', { ascending: false })
-    .limit(5);
+  // ✅ معالجة الخطأ
+  if (error) throw error;
 
-  return { 
-    usd: usdRes.data, 
-    gold: goldRes.data, 
-    btc: btcRes.data, 
-    news 
-  };
+  return { tariffs: (tariffs as ElectricityTariff[] | null) ?? [] };
 }
 
-async function MainContent() {
-  const { usd, gold, btc, news } = await getMainData();
-  const lastUpdate = usd?.fetched_at || gold?.fetched_at || btc?.fetched_at;
-
+function TariffCard({ tariff }: { tariff: ElectricityTariff }) {
+  const meta = TIER_META[tariff.tier_key];
+  
   return (
-    <div className="container mx-auto px-4 py-4 space-y-6">
-      
-      {lastUpdate && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
-          <span>🟢 محدث {formatRelativeTime(lastUpdate)}</span>
-          <span className="hidden sm:inline">البيانات من مصادر موثوقة</span>
+    <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{meta.icon}</span>
+          <div>
+            <h3 className="font-bold">{tariff.tier_name_ar}</h3>
+            <span className={`text-[10px] px-2 py-0.5 rounded ${meta.color}`}>
+              {meta.desc}
+            </span>
+          </div>
         </div>
-      )}
-
-      <section aria-labelledby="quick-prices">
-        <h2 id="quick-prices" className="sr-only">أسعار سريعة</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-          
-          {usd ? (
-            <PriceCard
-              title="دولار / ليرة"
-              icon="💵"
-              price={formatPrice(usd.buy_price, 'SYP')}
-              change={formatChange(usd.change_24h || 0)}
-              href="/prices/currency"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {gold?.price_syp ? (
-            <PriceCard
-              title="ذهب عيار 21"
-              icon="🥇"
-              price={formatPrice((gold.price_syp / 31.1035) * 0.875, 'SYP')}
-              change={formatChange(gold.change_24h || 0)}
-              href="/prices/gold"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {btc ? (
-            <PriceCard
-              title="بيتكوين"
-              icon="₿"
-              price={formatPrice(btc.price_usd, 'USD')}
-              change={formatChange(btc.change_24h || 0)}
-              href="/prices/crypto"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          <Link href="/prices/fuel" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">🛢️</span>
-                <span className="text-xs text-muted-foreground">محروقات</span>
-              </div>
-              <p className="text-sm text-muted-foreground">أسعار يدوية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/prices/electricity" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">⚡</span>
-                <span className="text-xs text-muted-foreground">كهرباء</span>
-              </div>
-              <p className="text-sm text-muted-foreground">تعرفة رسمية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-        </div>
-      </section>
-
-      <section aria-labelledby="latest-news">
-        <div className="flex items-center justify-between mb-3">
-          <h2 id="latest-news" className="font-bold text-lg">آخر الأخبار</h2>
-          <Link href="/news" className="text-xs text-primary hover:underline">عرض الكل</Link>
-        </div>
-        
-        <div className="bg-card rounded-xl border border-muted divide-y divide-muted">
-          {news?.map((article: NewsArticle) => (
-            <Link 
-              key={article.slug || article.title_ar}
-              href={`/news/${article.slug || 'news'}`}
-            >
-              <NewsCard
-                title={article.title_ar}
-                category={article.category}
-                time={formatRelativeTime(article.published_at)}
-              />
-            </Link>
-          )) || (
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="p-3 flex gap-3 animate-pulse">
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-muted rounded w-20" />
-                  <div className="h-4 bg-muted rounded w-full" />
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                </div>
-                <div className="h-4 w-4 bg-muted rounded mt-1" />
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground text-center leading-relaxed">
-        الأسعار المعروضة استرشادية وغير ملزمة قانونياً. 
-        نعمل على تحديث البيانات كل 5 دقائق من مصادر موثوقة.
+        <Zap className="h-5 w-5 text-muted-foreground" />
       </div>
+
+      <div className="bg-muted/30 rounded-lg p-4 text-center mb-3">
+        <p className="text-xs text-muted-foreground mb-1">سعر الكيلوواط/ساعة</p>
+        <p className="text-2xl font-bold font-mono">{formatPrice(tariff.price_per_kwh, 'SYP')}</p>
+      </div>
+
+      <div className="space-y-2 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between">
+          <span>تاريخ البدء:</span>          {/* ✅ تنسيق آمن للسيرفر */}
+          <span className="font-medium">{formatDateAR(tariff.effective_from)}</span>
+        </div>
+        {tariff.effective_to && (
+          <div className="flex items-center justify-between">
+            <span>تاريخ الانتهاء:</span>
+            <span className="font-medium">{formatDateAR(tariff.effective_to)}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between pt-2 border-t border-muted">
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            محدّث
+          </span>
+          <span>{formatRelativeTime(tariff.updated_at)}</span>
+        </div>
+      </div>
+
+      {tariff.source_reference && (
+        <a
+          href={tariff.source_reference}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex items-center gap-1 text-[10px] text-primary hover:underline"
+        >
+          <FileText className="h-3 w-3" />
+          مصدر القرار الرسمي
+        </a>
+      )}
     </div>
   );
 }
 
-export default function Home() {
+async function ElectricityContent() {
+  const { tariffs } = await getElectricityData();
+
+  if (!tariffs.length) {
+    return (
+      <div className="text-center py-12">
+        <RefreshCw className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-3" />
+        <p className="text-muted-foreground">لا توجد بيانات تعرفة كهرباء متوفرة حالياً</p>
+      </div>
+    );
+  }
+
+  const lastUpdate = tariffs[0]?.updated_at;
+
+  // ✅ مثال توضيحي واضح للمستخدم
+  const EXAMPLE_CONSUMPTION = 250; // كيلوواط/شهر - قيمة توضيحية فقط
+  const under300Tariff = tariffs.find(t => t.tier_key === 'residential_under_300');  const exampleCost = under300Tariff ? EXAMPLE_CONSUMPTION * under300Tariff.price_per_kwh : 0;
+
   return (
-    <>
+    <div className="container mx-auto px-4 py-4 space-y-6">
+      
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">تعرفة الكهرباء</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            محدّث {lastUpdate ? formatRelativeTime(lastUpdate) : '—'} • أسعار رسمية
+          </p>
+        </div>
+        <BackButton />
+      </div>
+
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-xs text-blue-200">
+        💡 الأسعار حسب شرائح وزارة الكهرباء السورية. قد تطبق رسوم إضافية أو دعم حسب القرار الرسمي.
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {tariffs.map((tariff) => (
+          <TariffCard key={tariff.id} tariff={tariff} />
+        ))}
+      </div>
+
+      {under300Tariff && (
+        <div className="bg-card rounded-xl p-4 border border-muted">
+          <h3 className="font-bold mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            مثال حسابي توضيحي
+          </h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">استهلاك منزلي (مثال):</span>
+              <span className="font-medium">{EXAMPLE_CONSUMPTION} كيلوواط/شهر</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">الشريحة:</span>
+              <span className="font-medium">منزلي أقل من 300 كيلوواط</span>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-muted">
+              <span className="text-muted-foreground">التكلفة التقديرية:</span>
+              <span className="font-bold font-mono">{formatPrice(exampleCost, 'SYP')}</span>
+            </div>
+          </div>
+          <p className="mt-3 text-[10px] text-muted-foreground italic">
+            ⚠️ هذا مثال توضيحي فقط لأغراض الشرح. الفاتورة الفعلية قد تختلف حسب العداد والرسوم الإضافية والقرارات الرسمية.
+          </p>
+        </div>
+      )}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: 'الرئيسية | ' + SITE_NAME,
-            description: 'أسعار الدولار، الذهب، والمحروقات في سوريا بشكل لحظي',
-            publisher: { '@type': 'Organization', name: SITE_NAME },
+            '@type': 'FAQPage',
+            mainEntity: tariffs.map(t => ({
+              '@type': 'Question',
+              name: `كم سعر الكهرباء لـ ${t.tier_name_ar}؟`,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: `سعر الكيلوواط/ساعة لـ ${t.tier_name_ar} هو ${formatPrice(t.price_per_kwh, 'SYP')} حسب القرار الرسمي ساري المفعول من ${formatDateAR(t.effective_from)}.`,
+              },
+            })),
           }),
         }}
       />
-      
-      <Suspense fallback={
-        <div className="container mx-auto px-4 py-8 space-y-6">
-          <div className="h-8 bg-muted rounded w-48 animate-pulse" />
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="min-w-[160px] bg-card rounded-xl p-4 border border-muted animate-pulse">
-                <div className="h-4 bg-muted rounded w-16 mb-3" />
-                <div className="h-6 bg-muted rounded w-20 mb-2" />
-                <div className="h-3 bg-muted rounded w-12" />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-3">
-            <div className="h-5 bg-muted rounded w-32 animate-pulse" />
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-card rounded-lg border border-muted animate-pulse" />
-            ))}
-          </div>
-        </div>
-      }>
-        <MainContent />
-      </Suspense>
-    </>
+    </div>
   );
+}
+
+export default function ElectricityPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        <div className="h-8 bg-muted rounded w-40 animate-pulse" />
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg h-12 animate-pulse" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-card rounded-xl p-4 border border-muted animate-pulse">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-8 w-8 bg-muted rounded" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-32" />
+                  <div className="h-3 bg-muted rounded w-20" />
+                </div>
+              </div>
+              <div className="h-16 bg-muted rounded mb-3" />
+              <div className="space-y-2">
+                <div className="h-3 bg-muted/50 rounded" />
+                <div className="h-3 bg-muted/50 rounded w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    }>
+      <ElectricityContent />
+    </Suspense>  );
 }
