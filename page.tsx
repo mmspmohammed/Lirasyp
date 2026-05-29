@@ -1,283 +1,236 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase-server';
-import { formatPrice, formatChange, formatRelativeTime } from '@/lib/format';
-import { SITE_NAME } from '@/lib/env';
+import { formatPrice, getChangeUI, formatRelativeTime, formatNumber, calculateGoldGrams } from '@/lib/format';
+import { SITE_URL } from '@/lib/env';
 
-type NewsArticle = {
-  title_ar: string;
-  category: string;
-  published_at: string;
-  slug?: string | null;
+export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: 'سعر الذهب في سوريا | الليرة عملتنا',
+  description: 'أسعار الذهب عيار 24، 22، 21، 18، 14، والأونصة العالمية، و PAX Gold الرقمي مقابل الليرة السورية',
+  keywords: ['سعر الذهب سوريا', 'ذهب عيار 21', 'ذهب عيار 24', 'أونصة ذهب', 'PAXG'],
+  alternates: { canonical: `${SITE_URL}/prices/gold` },
+  openGraph: {
+    title: 'سعر الذهب | الليرة عملتنا',
+    description: 'أسعار الذهب المحلية والعالمية - تحديث لحظي',
+    url: `${SITE_URL}/prices/gold`,
+    type: 'website',
+  },
 };
 
-function PriceCard({ title, icon, price, change, href }: {
-  title: string;
-  icon: string;
-  price: string;
-  change: { text: string; color: string };
-  href: string;
-}) {
-  return (
-    <Link href={href} className="block min-w-[160px] snap-start">
-      <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-2xl" aria-hidden="true">{icon}</span>
-          <span className="text-xs text-muted-foreground">{title}</span>
-        </div>
-        
-        <div className="space-y-1">
-          <p className="text-xl font-bold tracking-tight">{price}</p>
-          <div className={`flex items-center gap-1 text-xs font-medium ${change.color}`}>
-            {change.text.includes('📈') ? <TrendingUp className="h-3 w-3" /> : 
-             change.text.includes('📉') ? <TrendingDown className="h-3 w-3" /> : 
-             <Minus className="h-3 w-3" />}
-            {change.text}
-          </div>
-        </div>
-        
-        <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-          <span>التفاصيل</span>
-          <ArrowLeft className="h-3 w-3" />
-        </div>
-      </div>
-    </Link>
-  );
-}
+// ✅ تعريف الأنواع
+type AssetPrice = {
+  price_usd: number;
+  price_syp: number | null;
+  change_24h: number | null;
+  fetched_at: string;
+};
 
-function NewsCard({ title, category, time }: {
-  title: string;
-  category: string;
-  time: string;
-}) {
-  const categoryColors: Record<string, string> = {
-    economy: 'bg-blue-500/10 text-blue-400',
-    fuel: 'bg-orange-500/10 text-orange-400',
-    electricity: 'bg-yellow-500/10 text-yellow-400',
-    crypto: 'bg-purple-500/10 text-purple-400',
-    gold: 'bg-amber-500/10 text-amber-400',
-  };
-
-  return (
-    <article className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${categoryColors[category] || 'bg-muted text-muted-foreground'}`}>
-            {category === 'economy' ? 'اقتصادي' : 
-             category === 'fuel' ? 'محروقات' : 
-             category === 'electricity' ? 'كهرباء' : 
-             category === 'crypto' ? 'كريبتو' : 'ذهب'}
-          </span>
-          <span className="text-[10px] text-muted-foreground">{time}</span>
-        </div>
-        <h3 className="text-sm font-medium line-clamp-2 leading-snug">{title}</h3>
-      </div>
-      <ArrowLeft className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-    </article>
-  );
-}
-
-// ✅ جلب البيانات من الخادم - استخراج .data من الـ responses
-async function getMainData() {
+async function getGoldData() {
   const supabase = createServerSupabase();
   
-  const [usdRes, goldRes, btcRes] = await Promise.all([
-    supabase.from('exchange_rates').select('buy_price, change_24h, fetched_at').eq('base_currency', 'USD').eq('target_currency', 'SYP').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, price_syp, change_24h, fetched_at').eq('asset_code', 'XAU').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, change_24h, fetched_at').eq('asset_code', 'BTC').eq('is_latest', true).maybeSingle(),
-  ]);
+  const { data: goldOunce } = await supabase
+    .from('asset_prices')
+    .select('price_usd, price_syp, change_24h, fetched_at')
+    .eq('asset_code', 'XAU')
+    .eq('asset_type', 'gold_ounce')
+    .eq('is_latest', true)
+    .maybeSingle();
 
-  const { data: news } = await supabase
-    .from('news_articles')
-    .select('title_ar, category, published_at, slug')
-    .order('published_at', { ascending: false })
-    .limit(5);
-
+  const { data: paxg } = await supabase
+    .from('asset_prices')
+    .select('price_usd, price_syp, change_24h, fetched_at')
+    .eq('asset_code', 'PAXG')
+    .eq('asset_type', 'crypto')
+    .eq('is_latest', true)
+    .maybeSingle();
   return { 
-    usd: usdRes.data, 
-    gold: goldRes.data, 
-    btc: btcRes.data, 
-    news 
+    goldOunce: goldOunce as AssetPrice | null, 
+    paxg: paxg as AssetPrice | null 
   };
 }
 
-async function MainContent() {
-  const { usd, gold, btc, news } = await getMainData();
-  const lastUpdate = usd?.fetched_at || gold?.fetched_at || btc?.fetched_at;
+// ✅ مكون بطاقة الذهب (مع دعم العيارات المتعددة)
+function GoldCard({ title, icon, priceUsd, priceSyp, change, isPaxg = false }: {
+  title: string;
+  icon: string;
+  priceUsd: number;
+  priceSyp: number | null;
+  change: number;
+  isPaxg?: boolean;
+}) {
+  const changeFmt = getChangeUI(change);
+  
+  // ✅ حساب أسعار الجرامات حسب العيار (دالة مساعدة من lib/format)
+  const grams = calculateGoldGrams(priceUsd, priceSyp);
+
+  // ✅ قائمة العيارات المدعومة
+  const karats = [
+    { label: '24K', purity: '99.9%', data: grams.gram24k },
+    { label: '22K', purity: '91.6%', data: grams.gram22k },
+    { label: '21K', purity: '87.5%', data: grams.gram21k },
+    { label: '18K', purity: '75.0%', data: grams.gram18k },
+    { label: '14K', purity: '58.5%', data: grams.gram14k },
+  ] as const;
 
   return (
-    <div className="container mx-auto px-4 py-4 space-y-6">
-      
-      {lastUpdate && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
-          <span>🟢 محدث {formatRelativeTime(lastUpdate)}</span>
-          <span className="hidden sm:inline">البيانات من مصادر موثوقة</span>
+    <div className="bg-card rounded-xl p-4 border border-muted space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{icon}</span>
+          <div>
+            <h3 className="font-bold">{title}</h3>
+            {isPaxg && (
+              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded">ذهب رقمي 🪙</span>
+            )}
+          </div>
+        </div>
+        <div className={`flex items-center gap-1 text-sm font-medium ${changeFmt.color}`}>
+          <changeFmt.Icon className="h-4 w-4" />
+          {changeFmt.text}
+        </div>
+      </div>
+
+      {/* السعر بالوحدة الأساسية */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-muted/30 rounded-lg p-3 text-center">          <p className="text-xs text-muted-foreground mb-1">بالدولار</p>
+          <p className="text-lg font-bold font-mono">${formatNumber(priceUsd, 2)}</p>
+        </div>
+        <div className="bg-muted/30 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">بالليرة السورية</p>
+          <p className="text-lg font-bold font-mono">{priceSyp ? formatPrice(priceSyp, 'SYP') : '—'}</p>
+        </div>
+      </div>
+
+      {/* ✅ جدول أسعار الجرامات حسب العيار */}
+      {!isPaxg && (
+        <div className="pt-3 border-t border-muted">
+          <p className="text-xs text-muted-foreground mb-2">أسعار الجرام حسب العيار</p>
+          <div className="space-y-2">
+            {karats.map((k) => (
+              <div key={k.label} className="flex justify-between items-center text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">عيار {k.label}</span>
+                  <span className="text-[10px] text-muted-foreground">({k.purity})</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono font-medium">{formatNumber(k.data.usd, 2)} $</span>
+                  {k.data.syp && (
+                    <span className="text-xs text-muted-foreground mr-2">
+                      | {formatNumber(k.data.syp, 0)} SYP
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
-
-      <section aria-labelledby="quick-prices">
-        <h2 id="quick-prices" className="sr-only">أسعار سريعة</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-          
-          {usd ? (
-            <PriceCard
-              title="دولار / ليرة"
-              icon="💵"
-              price={formatPrice(usd.buy_price, 'SYP')}
-              change={formatChange(usd.change_24h || 0)}
-              href="/prices/currency"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {gold?.price_syp ? (
-            <PriceCard
-              title="ذهب عيار 21"
-              icon="🥇"
-              price={formatPrice((gold.price_syp / 31.1035) * 0.875, 'SYP')}
-              change={formatChange(gold.change_24h || 0)}
-              href="/prices/gold"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {btc ? (
-            <PriceCard
-              title="بيتكوين"
-              icon="₿"
-              price={formatPrice(btc.price_usd, 'USD')}
-              change={formatChange(btc.change_24h || 0)}
-              href="/prices/crypto"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          <Link href="/prices/fuel" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">🛢️</span>
-                <span className="text-xs text-muted-foreground">محروقات</span>
-              </div>
-              <p className="text-sm text-muted-foreground">أسعار يدوية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/prices/electricity" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">⚡</span>
-                <span className="text-xs text-muted-foreground">كهرباء</span>
-              </div>
-              <p className="text-sm text-muted-foreground">تعرفة رسمية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-        </div>
-      </section>
-
-      <section aria-labelledby="latest-news">
-        <div className="flex items-center justify-between mb-3">
-          <h2 id="latest-news" className="font-bold text-lg">آخر الأخبار</h2>
-          <Link href="/news" className="text-xs text-primary hover:underline">عرض الكل</Link>
-        </div>
-        
-        <div className="bg-card rounded-xl border border-muted divide-y divide-muted">
-          {news?.map((article: NewsArticle) => (
-            <Link 
-              key={article.slug || article.title_ar}
-              href={`/news/${article.slug || 'news'}`}
-            >
-              <NewsCard
-                title={article.title_ar}
-                category={article.category}
-                time={formatRelativeTime(article.published_at)}
-              />
-            </Link>
-          )) || (
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="p-3 flex gap-3 animate-pulse">
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-muted rounded w-20" />
-                  <div className="h-4 bg-muted rounded w-full" />
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                </div>
-                <div className="h-4 w-4 bg-muted rounded mt-1" />
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground text-center leading-relaxed">
-        الأسعار المعروضة استرشادية وغير ملزمة قانونياً. 
-        نعمل على تحديث البيانات كل 5 دقائق من مصادر موثوقة.
-      </div>
     </div>
   );
 }
 
-export default function Home() {
+async function GoldContent() {
+  const { goldOunce, paxg } = await getGoldData();
+
+  if (!goldOunce && !paxg) {
+    return (
+      <div className="text-center py-12">
+        <RefreshCw className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-3" />
+        <p className="text-muted-foreground">جاري تحميل أسعار الذهب...</p>
+      </div>
+    );
+  }
+
+  const lastUpdate = goldOunce?.fetched_at || paxg?.fetched_at;
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: 'الرئيسية | ' + SITE_NAME,
-            description: 'أسعار الدولار، الذهب، والمحروقات في سوريا بشكل لحظي',
-            publisher: { '@type': 'Organization', name: SITE_NAME },
-          }),
-        }}
-      />
+    <div className="container mx-auto px-4 py-4 space-y-6">
       
-      <Suspense fallback={
-        <div className="container mx-auto px-4 py-8 space-y-6">
-          <div className="h-8 bg-muted rounded w-48 animate-pulse" />
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="min-w-[160px] bg-card rounded-xl p-4 border border-muted animate-pulse">
-                <div className="h-4 bg-muted rounded w-16 mb-3" />
-                <div className="h-6 bg-muted rounded w-20 mb-2" />
-                <div className="h-3 bg-muted rounded w-12" />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-3">
-            <div className="h-5 bg-muted rounded w-32 animate-pulse" />
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-card rounded-lg border border-muted animate-pulse" />
-            ))}
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">أسعار الذهب</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            محدث {lastUpdate ? formatRelativeTime(lastUpdate) : '—'}
+          </p>
         </div>
-      }>
-        <MainContent />
-      </Suspense>
-    </>
+        <Link href="/" className="flex items-center gap-1 text-sm text-primary hover:underline">
+          <ArrowLeft className="h-4 w-4" />
+          الرئيسية
+        </Link>
+      </div>
+
+      {goldOunce && (
+        <GoldCard
+          title="ذهب عالمي (أونصة)"
+          icon="🥇"
+          priceUsd={goldOunce.price_usd}
+          priceSyp={goldOunce.price_syp}
+          change={goldOunce.change_24h ?? 0} // ✅ التعامل مع null بأمان
+        />
+      )}
+
+      {paxg && (
+        <GoldCard
+          title="PAX Gold (PAXG)"
+          icon="🪙"
+          priceUsd={paxg.price_usd}
+          priceSyp={paxg.price_syp}
+          change={paxg.change_24h ?? 0}
+          isPaxg
+        />
+      )}
+
+      <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground space-y-2">
+        <p>💡 <strong>ملاحظة:</strong> أونصة الذهب = 31.1035 جرام</p>
+        <p>🔹 العيارات: 24ك (نقي) ← 22ك ← 21ك (الأشهر في سوريا) ← 18ك ← 14ك</p>
+        <p className="pt-2 border-t border-muted">
+          ⚠️ PAX Gold هو عملة رقمية مدعومة بالذهب الفعلي، كل 1 PAXG = 1 أونصة ذهب مخزنة.
+        </p>
+      </div>
+
+      {goldOunce && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Product',
+              name: 'Gold Ounce (XAU)',
+              description: 'سعر الأونصة العالمية للذهب مقابل الدولار والليرة السورية',
+              offers: {
+                '@type': 'Offer',
+                price: goldOunce.price_usd,
+                priceCurrency: 'USD',
+                availability: 'https://schema.org/InStock',
+              },
+            }),
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function GoldPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        <div className="h-8 bg-muted rounded w-32 animate-pulse" />
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="bg-card rounded-xl p-4 border border-muted animate-pulse space-y-4">
+            <div className="h-6 bg-muted rounded w-40" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-14 bg-muted rounded" />
+              <div className="h-14 bg-muted rounded" />
+            </div>
+            <div className="h-20 bg-muted/50 rounded" />
+          </div>
+        ))}
+      </div>
+    }>
+      <GoldContent />
+    </Suspense>
   );
 }
