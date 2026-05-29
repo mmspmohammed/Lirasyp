@@ -1,27 +1,21 @@
-import { Suspense } from 'react';
-import type { Metadata } from 'next';
+import { createClient } from '@supabase/supabase-js';
+import { notFound } from 'next/navigation';
+import type { Metadata, ResolvingMetadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
-import Image from 'next/image'; // ✅ استيراد مكون الصورة المحسّن
-import { RefreshCw, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, ExternalLink } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase-server';
-import { formatRelativeTime } from '@/lib/format';
-import { SITE_URL, SITE_NAME } from '@/lib/env';
-import BackButton from '@/components/BackButton';
-import { CATEGORY_META, getCategoryMeta, CategoryKey } from '@/lib/categories'; // ✅ استيراد مشترك
+import { formatRelativeTime, formatDateAR, sanitizeHTML } from '@/lib/format';
+import { SITE_URL, SITE_NAME, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } from '@/lib/env';
+import { getCategoryMeta, CategoryKey } from '@/lib/categories';
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: 'أخبار الاقتصاد في سوريا | الليرة عملتنا',
-  description: 'آخر الأخبار الاقتصادية والمالية في سوريا: أسعار، قرارات، تحليلات - من مصادر موثوقة مثل سانا والاقتصاد السوري',
-  keywords: ['أخبار سوريا', 'اقتصاد سوريا', 'أسعار', 'قرارات مالية', 'تحليلات'],
-  alternates: { canonical: `${SITE_URL}/news` },
-  openGraph: {
-    title: 'الأخبار | الليرة عملتنا',
-    description: 'آخر الأخبار الاقتصادية في سوريا - مصادر موثوقة',
-    url: `${SITE_URL}/news`,
-    type: 'website',
-  },
+type RelatedArticle = {
+  title_ar: string;
+  slug: string;
+  published_at: string;
+  category: CategoryKey;
 };
 
 type NewsArticle = {
@@ -29,180 +23,226 @@ type NewsArticle = {
   title_ar: string;
   slug: string;
   summary: string;
+  content: string | null;
   category: CategoryKey;
   published_at: string;
+  updated_at: string | null;
   image_url: string | null;
   source_name: string;
+  source_url: string | null;
+  seo_keywords: string[] | null;
 };
 
-async function getNewsData() {
+const supabaseBuild = createClient(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+async function getArticle(slug: string) {
   const supabase = createServerSupabase();
   
-  const { data: articles, error } = await supabase
+  const { data: article, error } = await supabase
     .from('news_articles')
-    .select('id, title_ar, slug, summary, category, published_at, image_url, source_name')
-    .order('published_at', { ascending: false })
-    .limit(50);
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
 
   if (error) throw error;
-  return { articles: (articles as NewsArticle[] | null) ?? [] };
+  if (!article) notFound();
+
+  const { data: related, error: relatedError } = await supabase
+    .from('news_articles')
+    .select('title_ar, slug, published_at, category')
+    .eq('category', article.category)
+    .neq('id', article.id)
+    .order('published_at', { ascending: false })
+    .limit(3);
+
+  if (relatedError) console.warn('Related articles error:', relatedError);
+
+  return { 
+    article: article as NewsArticle, 
+    related: (related as RelatedArticle[] | null) ?? [] 
+  };
 }
-function NewsCard({ article }: { article: NewsArticle }) {
-  const meta = getCategoryMeta(article.category);
+
+type Props = { params: { slug: string } };
+
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {  // ✅ Promise<Metadata> (قوس واحد!)
+  const { slug } = params;
+  const { article } = await getArticle(slug);
+  const previousImages = (await parent).openGraph?.images || [];
+
+  return {
+    title: `${article.title_ar} | ${SITE_NAME}`,
+    description: article.summary,
+    keywords: article.seo_keywords || [article.category, 'سوريا', 'اقتصاد'],
+    alternates: { canonical: `${SITE_URL}/news/${article.slug}` },
+    openGraph: {
+      title: article.title_ar,
+      description: article.summary,
+      url: `${SITE_URL}/news/${article.slug}`,
+      type: 'article',
+      publishedTime: article.published_at,
+      authors: [article.source_name],
+      section: article.category,
+      images: article.image_url 
+        ? [{ url: article.image_url, width: 1200, height: 630, alt: article.title_ar }, ...previousImages]
+        : previousImages,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title_ar,
+      description: article.summary,
+      images: article.image_url ? [article.image_url] : [],
+    },
+  };
+}
+
+export default async function ArticlePage({ params }: Props) {
+  const { slug } = params;
+  const { article, related } = await getArticle(slug);
   
+  const categoryMeta = getCategoryMeta(article.category);
+  const safeContent = sanitizeHTML(article.content || '');
+
   return (
-    <Link href={`/news/${article.slug}`} className="block group">
-      <article className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition flex gap-4">
-        {/* ✅ صورة محسّنة مع Next.js Image */}
-        <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg overflow-hidden relative">
-          {article.image_url ? (
-            <Image
-              src={article.image_url}
-              alt={article.title_ar}
-              fill
-              className="object-cover group-hover:scale-105 transition"
-              sizes="(max-width: 768px) 80px, 120px"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <span aria-hidden="true">{meta.icon}</span>
-            </div>
-          )}
+    <article className="container mx-auto px-4 py-4 max-w-3xl">
+      
+      <Link href="/news" className="inline-flex items-center gap-1 text-sm text-primary hover:underline mb-4">
+        <ArrowLeft className="h-4 w-4" />
+        عودة للأخبار
+      </Link>
+
+      <header className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`text-xs px-2 py-1 rounded font-medium ${categoryMeta.color}`}>
+            {categoryMeta.label}
+          </span>
+          <time className="text-xs text-muted-foreground flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {formatDateAR(article.published_at)}
+          </time>
         </div>
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${meta.color}`}>
-              {meta.label}
-            </span>
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {formatRelativeTime(article.published_at)}
-            </span>
-          </div>
-          
-          <h3 className="font-bold text-sm leading-snug line-clamp-2 group-hover:text-primary transition">
-            {article.title_ar}
-          </h3>
-          
-          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-            {article.summary}
-          </p>
-          
-          <p className="text-[10px] text-muted-foreground mt-2">
-            المصدر: {article.source_name}
-          </p>
-        </div>
-      </article>
-    </Link>
-  );}
+        <h1 className="text-2xl font-bold leading-tight mb-3">
+          {article.title_ar}
+        </h1>
+        
+        <p className="text-sm text-muted-foreground">
+          المصدر: <span className="font-medium">{article.source_name}</span> • 
+          محدّث {formatRelativeTime(article.published_at)}
+        </p>
+      </header>
 
-async function NewsContent() {
-  const { articles } = await getNewsData();
-
-  if (!articles.length) {
-    return (
-      <div className="text-center py-12">
-        <RefreshCw className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-3" />
-        <p className="text-muted-foreground">لا توجد أخبار متوفرة حالياً</p>
-      </div>
-    );
-  }
-
-  const categories = [...new Set(articles.map(a => a.category))];
-
-  return (
-    <div className="container mx-auto px-4 py-4 space-y-6">
+      {article.image_url && (
+        <figure className="mb-6 rounded-xl overflow-hidden border border-muted relative aspect-video">
+          <Image
+            src={article.image_url}
+            alt={article.title_ar}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 800px"
+            priority
+          />
+        </figure>
+      )}
       
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">آخر الأخبار</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {articles.length} خبر • محدّث {formatRelativeTime(articles[0].published_at)}
-          </p>
-        </div>
-        <BackButton />
+      <div className="bg-muted/30 rounded-lg p-4 mb-6 text-sm border-l-4 border-primary">
+        {article.summary}
       </div>
 
-      {/* فئات الأخبار */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <Link 
-          href="/news" 
-          className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-background whitespace-nowrap"
+      <div 
+        className="prose prose-invert prose-sm max-w-none mb-8"
+        dangerouslySetInnerHTML={{ __html: safeContent }}
+      />
+
+      {article.source_url && (
+        <a
+          href={article.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-sm text-primary hover:underline mb-8"
         >
-          الكل
-        </Link>
-        {categories.map((cat) => {
-          const meta = getCategoryMeta(cat);
-          return (
-            <Link
-              key={cat}
-              href={`/news?category=${cat}`}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border border-muted hover:border-primary/50 transition ${meta.color}`}
-            >
-              {meta.label}
-            </Link>
-          );
-        })}
-      </div>
-      <div className="space-y-3">
-        {articles.map((article) => (
-          <NewsCard key={article.id} article={article} />
-        ))}
-      </div>
+          <ExternalLink className="h-4 w-4" />
+          اقرأ الخبر من مصدره الأصلي
+        </a>
+      )}
 
-      {/* Schema.org */}
+      {related.length > 0 && (
+        <section className="border-t border-muted pt-6">
+          <h2 className="font-bold mb-4">أخبار ذات صلة</h2>
+          <div className="space-y-3">
+            {related.map((item) => {
+              const meta = getCategoryMeta(item.category);
+              return (
+                <Link 
+                  key={item.slug} 
+                  href={`/news/${item.slug}`}
+                  className="block p-3 rounded-lg bg-card border border-muted hover:border-primary/50 transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeTime(item.published_at)}
+                    </span>
+                    <span className="text-[10px] bg-muted px-2 py-0.5 rounded">
+                      {meta.label}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium mt-2 line-clamp-2">
+                    {item.title_ar}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'Blog',
-            name: 'أخبار الاقتصاد في سوريا',
-            description: 'آخر الأخبار الاقتصادية والمالية في سوريا',
-            publisher: { '@type': 'Organization', name: SITE_NAME },
-            blogPost: articles.slice(0, 10).map((a, i) => ({
-              '@type': 'BlogPosting',
-              headline: a.title_ar,
-              description: a.summary,
-              datePublished: a.published_at,
-              url: `${SITE_URL}/news/${a.slug}`,
-              image: a.image_url || undefined,
-              author: { '@type': 'Organization', name: a.source_name },
-            })),
+            '@type': 'NewsArticle',
+            headline: article.title_ar,
+            description: article.summary,
+            image: article.image_url ? [article.image_url] : [],
+            datePublished: article.published_at,
+            dateModified: article.updated_at || article.published_at,
+            author: { '@type': 'Organization', name: article.source_name },
+            publisher: {
+              '@type': 'Organization',
+              name: SITE_NAME,
+              logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.png` },
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': `${SITE_URL}/news/${article.slug}`,
+            },
+            keywords: (article.seo_keywords || [article.category]).join(', '),
           }),
         }}
       />
-    </div>
+    </article>
   );
 }
 
-export default function NewsPage() {
-  return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <div className="h-8 bg-muted rounded w-32 animate-pulse" />
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-8 w-16 bg-muted rounded-full animate-pulse" />
-          ))}
-        </div>
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-card rounded-xl p-4 border border-muted animate-pulse flex gap-4">
-              <div className="w-20 h-20 bg-muted rounded-lg" />
-              <div className="flex-1 space-y-2">
-                <div className="h-3 bg-muted rounded w-24" />
-                <div className="h-4 bg-muted rounded w-full" />                <div className="h-4 bg-muted rounded w-3/4" />
-                <div className="h-3 bg-muted rounded w-20" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    }>
-      <NewsContent />
-    </Suspense>
-  );
+export async function generateStaticParams() {
+  try {
+    const { data, error } = await supabaseBuild
+      .from('news_articles')
+      .select('slug')
+      .limit(100);
+    
+    if (error) {
+      console.warn('Static params error:', error);
+      return [];
+    }
+    
+    return (data ?? []).map((a: { slug: string }) => ({ slug: a.slug }));
+  } catch (err) {
+    console.error('Static params generation failed:', err);
+    return [];
+  }
 }
