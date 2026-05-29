@@ -4,7 +4,15 @@ import { Tajawal } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import Header from '@/components/Header';
 import { SITE_NAME, SITE_URL } from '@/lib/env';
+// app/layout.tsx
 
+import FloatingCalculator from "@/components/calculator/FloatingCalculator";
+
+<body>
+  {children}
+
+  <FloatingCalculator />
+</body>
 const tajawal = Tajawal({
   subsets: ['arabic'],
   weight: ['400', '500', '700'],
@@ -19,7 +27,7 @@ export const metadata: Metadata = {
     default: 'الليرة عملتنا | أسعار الدولار، الذهب، والمحروقات في سوريا',
     template: `%s | الليرة عملتنا`,
   },
-  description: 'موقع الليرة عملتنا يعرض أسعار الدولار مقابل الليرة السورية، الذهب، المحروقات، الكهرباء، والعملات الرقمية بشكل لحظي وموثوق. تحديث كل 5 دقائق.',
+  description: 'موقع الليرة عملتنا يعرض أسعار الدولار مقابل الليرة السورية، الذهب، المحروقات، الكهرباء، والعملات الرقمية بشكل لحظي وموثوق. تحديث كل دقيقة.',
   keywords: ['سعر الدولار في سوريا', 'الليرة السورية', 'سعر الذهب سوريا', 'أسعار المحروقات', 'تعرفة الكهرباء', 'عملات رقمية سوريا', 'اقتصاد سوريا'],
   authors: [{ name: 'فريق الليرة عملتنا' }],
   creator: 'LiraSYP Team',
