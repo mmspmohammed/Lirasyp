@@ -1,283 +1,229 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { RefreshCw, MapPin, Calendar } from 'lucide-react';
 import { createServerSupabase } from '@/lib/supabase-server';
-import { formatPrice, formatChange, formatRelativeTime } from '@/lib/format';
-import { SITE_NAME } from '@/lib/env';
+import { formatPrice, formatRelativeTime, formatNumber } from '@/lib/format';
+import { SITE_URL } from '@/lib/env';
+import BackButton from '@/components/BackButton'; // ✅ مكون مشترك
 
-type NewsArticle = {
-  title_ar: string;
-  category: string;
-  published_at: string;
-  slug?: string | null;
+export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: 'أسعار المحروقات في سوريا | الليرة عملتنا',
+  description: 'أسعار البنزين 95، البنزين 90، المازوت، والغاز المنزلي والصناعي في سوريا - تحديث يدوي من مصادر رسمية',
+  keywords: ['أسعار المحروقات سوريا', 'بنزين 95', 'مازوت', 'غاز منزلي', 'أسطوانة غاز'],
+  alternates: { canonical: `${SITE_URL}/prices/fuel` },
+  openGraph: {
+    title: 'المحروقات | الليرة عملتنا',
+    description: 'أسعار المحروقات في سوريا - تحديث يدوي موثوق',
+    url: `${SITE_URL}/prices/fuel`,
+    type: 'website',
+  },
 };
 
-function PriceCard({ title, icon, price, change, href }: {
-  title: string;
-  icon: string;
-  price: string;
-  change: { text: string; color: string };
-  href: string;
-}) {
-  return (
-    <Link href={href} className="block min-w-[160px] snap-start">
-      <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-2xl" aria-hidden="true">{icon}</span>
-          <span className="text-xs text-muted-foreground">{title}</span>
-        </div>
-        
-        <div className="space-y-1">
-          <p className="text-xl font-bold tracking-tight">{price}</p>
-          <div className={`flex items-center gap-1 text-xs font-medium ${change.color}`}>
-            {change.text.includes('📈') ? <TrendingUp className="h-3 w-3" /> : 
-             change.text.includes('📉') ? <TrendingDown className="h-3 w-3" /> : 
-             <Minus className="h-3 w-3" />}
-            {change.text}
-          </div>
-        </div>
-        
-        <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-          <span>التفاصيل</span>
-          <ArrowLeft className="h-3 w-3" />
-        </div>
-      </div>
-    </Link>
-  );
-}
+// ✅ تعريف الأنواع بدقة
+type FuelPrice = {
+  id: string;
+  material_type: 'gasoline_95' | 'gasoline_90' | 'diesel' | 'gas_cylinder';
+  material_name_ar: string;
+  price_usd: number;
+  price_syp: number;
+  unit_ar: string;
+  region: string;
+  updated_at: string;
+  notes: string | null;
+};
 
-function NewsCard({ title, category, time }: {
-  title: string;
-  category: string;
-  time: string;
-}) {
-  const categoryColors: Record<string, string> = {
-    economy: 'bg-blue-500/10 text-blue-400',
-    fuel: 'bg-orange-500/10 text-orange-400',
-    electricity: 'bg-yellow-500/10 text-yellow-400',
-    crypto: 'bg-purple-500/10 text-purple-400',
-    gold: 'bg-amber-500/10 text-amber-400',
-  };
+// ✅ خريطة عرض المواد (ثابتة ومنظّمة)
+const FUEL_META: Record<FuelPrice['material_type'], { icon: string; category: string }> = {
+  gasoline_95: { icon: '⛽', category: 'بنزين' },
+  gasoline_90: { icon: '⛽', category: 'بنزين' },
+  diesel: { icon: '🚛', category: 'مازوت' },
+  gas_cylinder: { icon: '🔥', category: 'غاز' },
+};
 
-  return (
-    <article className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${categoryColors[category] || 'bg-muted text-muted-foreground'}`}>
-            {category === 'economy' ? 'اقتصادي' : 
-             category === 'fuel' ? 'محروقات' : 
-             category === 'electricity' ? 'كهرباء' : 
-             category === 'crypto' ? 'كريبتو' : 'ذهب'}
-          </span>
-          <span className="text-[10px] text-muted-foreground">{time}</span>
-        </div>
-        <h3 className="text-sm font-medium line-clamp-2 leading-snug">{title}</h3>
-      </div>
-      <ArrowLeft className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-    </article>
-  );
-}
+// ✅ أيقونات الفئات للعرض (تجنب عرض `false`)
+const CATEGORY_ICONS: Record<string, string> = {
+  'بنزين': '⛽',
+  'مازوت': '🚛',
+  'غاز': '🔥',};
 
-// ✅ جلب البيانات من الخادم - استخراج .data من الـ responses
-async function getMainData() {
+// ✅ جلب البيانات مع معالجة الأخطاء
+async function getFuelData() {
   const supabase = createServerSupabase();
   
-  const [usdRes, goldRes, btcRes] = await Promise.all([
-    supabase.from('exchange_rates').select('buy_price, change_24h, fetched_at').eq('base_currency', 'USD').eq('target_currency', 'SYP').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, price_syp, change_24h, fetched_at').eq('asset_code', 'XAU').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, change_24h, fetched_at').eq('asset_code', 'BTC').eq('is_latest', true).maybeSingle(),
-  ]);
+  const { data: fuels, error } = await supabase
+    .from('fuel_prices')
+    .select('*')
+    .eq('region', 'all_syria')
+    .order('material_type');
 
-  const { data: news } = await supabase
-    .from('news_articles')
-    .select('title_ar, category, published_at, slug')
-    .order('published_at', { ascending: false })
-    .limit(5);
+  // ✅ معالجة الخطأ: Next.js سيعرض صفحة error.tsx تلقائياً
+  if (error) throw error;
 
-  return { 
-    usd: usdRes.data, 
-    gold: goldRes.data, 
-    btc: btcRes.data, 
-    news 
-  };
+  // ✅ استخدام ?? للتعامل الدقيق مع null/undefined
+  return { fuels: (fuels as FuelPrice[] | null) ?? [] };
 }
 
-async function MainContent() {
-  const { usd, gold, btc, news } = await getMainData();
-  const lastUpdate = usd?.fetched_at || gold?.fetched_at || btc?.fetched_at;
-
+// ✅ مكون بطاقة سعر المحروقات
+function FuelCard({ fuel }: { fuel: FuelPrice }) {
+  const meta = FUEL_META[fuel.material_type];
+  
   return (
-    <div className="container mx-auto px-4 py-4 space-y-6">
-      
-      {lastUpdate && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
-          <span>🟢 محدث {formatRelativeTime(lastUpdate)}</span>
-          <span className="hidden sm:inline">البيانات من مصادر موثوقة</span>
+    <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{meta.icon}</span>
+          <div>
+            <h3 className="font-bold">{fuel.material_name_ar}</h3>
+            <p className="text-xs text-muted-foreground">{meta.category}</p>
+          </div>
         </div>
-      )}
-
-      <section aria-labelledby="quick-prices">
-        <h2 id="quick-prices" className="sr-only">أسعار سريعة</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-          
-          {usd ? (
-            <PriceCard
-              title="دولار / ليرة"
-              icon="💵"
-              price={formatPrice(usd.buy_price, 'SYP')}
-              change={formatChange(usd.change_24h || 0)}
-              href="/prices/currency"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {gold?.price_syp ? (
-            <PriceCard
-              title="ذهب عيار 21"
-              icon="🥇"
-              price={formatPrice((gold.price_syp / 31.1035) * 0.875, 'SYP')}
-              change={formatChange(gold.change_24h || 0)}
-              href="/prices/gold"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {btc ? (
-            <PriceCard
-              title="بيتكوين"
-              icon="₿"
-              price={formatPrice(btc.price_usd, 'USD')}
-              change={formatChange(btc.change_24h || 0)}
-              href="/prices/crypto"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          <Link href="/prices/fuel" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">🛢️</span>
-                <span className="text-xs text-muted-foreground">محروقات</span>
-              </div>
-              <p className="text-sm text-muted-foreground">أسعار يدوية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/prices/electricity" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">⚡</span>
-                <span className="text-xs text-muted-foreground">كهرباء</span>
-              </div>
-              <p className="text-sm text-muted-foreground">تعرفة رسمية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-        </div>
-      </section>
-
-      <section aria-labelledby="latest-news">
-        <div className="flex items-center justify-between mb-3">
-          <h2 id="latest-news" className="font-bold text-lg">آخر الأخبار</h2>
-          <Link href="/news" className="text-xs text-primary hover:underline">عرض الكل</Link>
-        </div>
-        
-        <div className="bg-card rounded-xl border border-muted divide-y divide-muted">
-          {news?.map((article: NewsArticle) => (
-            <Link 
-              key={article.slug || article.title_ar}
-              href={`/news/${article.slug || 'news'}`}
-            >
-              <NewsCard
-                title={article.title_ar}
-                category={article.category}
-                time={formatRelativeTime(article.published_at)}
-              />
-            </Link>
-          )) || (
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="p-3 flex gap-3 animate-pulse">
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-muted rounded w-20" />
-                  <div className="h-4 bg-muted rounded w-full" />
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                </div>
-                <div className="h-4 w-4 bg-muted rounded mt-1" />
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground text-center leading-relaxed">
-        الأسعار المعروضة استرشادية وغير ملزمة قانونياً. 
-        نعمل على تحديث البيانات كل 5 دقائق من مصادر موثوقة.
+        <span className="text-xs bg-muted px-2 py-1 rounded font-mono">
+          {fuel.unit_ar}
+        </span>
       </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="bg-muted/30 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">بالدولار</p>
+          <p className="text-lg font-bold font-mono">${formatNumber(fuel.price_usd, 2)}</p>
+        </div>
+        <div className="bg-muted/30 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground mb-1">بالليرة السورية</p>
+          <p className="text-lg font-bold font-mono">{formatPrice(fuel.price_syp, 'SYP')}</p>
+        </div>
+      </div>
+
+      <div className="pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">        <div className="flex items-center gap-1">
+          <Calendar className="h-3 w-3" />
+          <span>محدّث {formatRelativeTime(fuel.updated_at)}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <MapPin className="h-3 w-3" />
+          <span>{fuel.region === 'all_syria' ? 'كل سوريا' : fuel.region}</span>
+        </div>
+      </div>
+
+      {fuel.notes && (
+        <p className="mt-2 text-[10px] text-muted-foreground italic">
+          💡 {fuel.notes}
+        </p>
+      )}
     </div>
   );
 }
 
-export default function Home() {
+async function FuelContent() {
+  const { fuels } = await getFuelData(); // ✅ الخطأ سيُرمي تلقائياً هنا
+
+  if (!fuels.length) {
+    return (
+      <div className="text-center py-12">
+        <RefreshCw className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-3" />
+        <p className="text-muted-foreground">لا توجد بيانات محروقات متوفرة حالياً</p>
+      </div>
+    );
+  }
+
+  const lastUpdate = fuels[0]?.updated_at;
+
+  // تجميع المواد حسب الفئة
+  const grouped = fuels.reduce((acc, fuel) => {
+    const cat = FUEL_META[fuel.material_type].category;
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(fuel);
+    return acc;
+  }, {} as Record<string, FuelPrice[]>);
+
   return (
-    <>
+    <div className="container mx-auto px-4 py-4 space-y-6">
+      
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">أسعار المحروقات</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            محدّث {lastUpdate ? formatRelativeTime(lastUpdate) : '—'} • إدخال يدوي
+          </p>        </div>
+        <BackButton /> {/* ✅ مكون مشترك */}
+      </div>
+
+      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-200">
+        ⚠️ أسعار المحروقات تُحدَّث يدوياً بناءً على القرارات الرسمية. قد تختلف الأسعار في السوق المحلي.
+      </div>
+
+      {Object.entries(grouped).map(([category, items]) => (
+        <section key={category} className="space-y-3">
+          <h2 className="font-bold text-lg flex items-center gap-2">
+            {/* ✅ استخدام خريطة الأيقونات لتجنب عرض `false` */}
+            <span aria-hidden="true">{CATEGORY_ICONS[category]}</span>
+            {category}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {items.map((fuel) => (
+              <FuelCard key={fuel.id} fuel={fuel} />
+            ))}
+          </div>
+        </section>
+      ))}
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: 'الرئيسية | ' + SITE_NAME,
-            description: 'أسعار الدولار، الذهب، والمحروقات في سوريا بشكل لحظي',
-            publisher: { '@type': 'Organization', name: SITE_NAME },
+            '@type': 'ItemList',
+            name: 'أسعار المحروقات في سوريا',
+            description: 'أسعار البنزين، المازوت، والغاز في سوريا - تحديث يدوي',
+            itemListElement: fuels.map((f, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              item: {
+                '@type': 'Product',
+                name: f.material_name_ar,
+                description: `سعر ${f.material_name_ar} (${f.unit_ar})`,
+                offers: {
+                  '@type': 'Offer',
+                  price: f.price_syp,
+                  priceCurrency: 'SYP',
+                  availability: 'https://schema.org/InStock',
+                },
+              },
+            })),
           }),
         }}
       />
-      
-      <Suspense fallback={
-        <div className="container mx-auto px-4 py-8 space-y-6">
-          <div className="h-8 bg-muted rounded w-48 animate-pulse" />
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="min-w-[160px] bg-card rounded-xl p-4 border border-muted animate-pulse">
-                <div className="h-4 bg-muted rounded w-16 mb-3" />
-                <div className="h-6 bg-muted rounded w-20 mb-2" />
-                <div className="h-3 bg-muted rounded w-12" />
+    </div>  );
+}
+
+export default function FuelPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        <div className="h-8 bg-muted rounded w-40 animate-pulse" />
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg h-12 animate-pulse" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-card rounded-xl p-4 border border-muted animate-pulse">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-8 w-8 bg-muted rounded" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-24" />
+                  <div className="h-3 bg-muted rounded w-16" />
+                </div>
               </div>
-            ))}
-          </div>
-          <div className="space-y-3">
-            <div className="h-5 bg-muted rounded w-32 animate-pulse" />
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-card rounded-lg border border-muted animate-pulse" />
-            ))}
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-12 bg-muted rounded" />
+                <div className="h-12 bg-muted rounded" />
+              </div>
+              <div className="h-4 bg-muted/50 rounded mt-3" />
+            </div>
+          ))}
         </div>
-      }>
-        <MainContent />
-      </Suspense>
-    </>
+      </div>
+    }>
+      <FuelContent />
+    </Suspense>
   );
 }
