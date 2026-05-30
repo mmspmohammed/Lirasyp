@@ -83,7 +83,7 @@ async function getMainData() {
   const supabase = createServerSupabase();
   
   const [usdRes, goldRes, btcRes] = await Promise.all([
-    supabase.from('exchange_rates').select('buy_price, change_24h, fetched_at').eq('base_currency', 'USD').eq('target_currency', 'SYP').eq('is_latest', true).maybeSingle(),
+    supabase.from('exchange_rates').select('sell_price, change_24h, fetched_at').eq('base_currency', 'USD').eq('target_currency', 'SYP').eq('is_latest', true).maybeSingle(),
     supabase.from('asset_prices').select('price_usd, price_syp, change_24h, fetched_at').eq('asset_code', 'XAU').eq('is_latest', true).maybeSingle(),
     supabase.from('asset_prices').select('price_usd, change_24h, fetched_at').eq('asset_code', 'BTC').eq('is_latest', true).maybeSingle(),
   ]);
