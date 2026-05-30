@@ -124,7 +124,7 @@ async function MainContent() {
             <PriceCard
               title="دولار / ليرة"
               icon="💵"
-              price={formatPrice(usd.buy_price, 'SYP')}
+              price={formatPrice(usd.sell_price, 'SYP')}
               change={formatChange(usd.change_24h || 0)}
               href="/prices/currency"
             />
