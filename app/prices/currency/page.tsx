@@ -64,7 +64,7 @@ async function getCurrencyData() {
   return { usd, currencies: currencies || [], currencyInfo: currencyInfo || [] };
 }
 
-// ✅ مكون جدول العملات (بأنواع دقيقة)
+// ✅ مكون جدول العملات (بأنواع دقيقة + عرض منزلتين عشريتين لـ USD)
 function CurrencyTable({ currencies, currencyInfo, usdRate }: {
   currencies: CurrencyRate[];
   currencyInfo: CurrencyInfo[];
@@ -89,21 +89,25 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
             {currencies.map((rate) => {
               const meta = getCurrencyMeta(rate.target_currency);
               const change = getChangeUI(rate.change_24h || 0);
-              const buyInSyp = rate.buy_price ;
-              const sellInSyp = rate.sell_price * usdRate;
+              
+              // ✅ عرض السعر بالدولار بمنزلتين عشريتين
+              const priceUsd = parseFloat(rate.buy_price as any);
+              const priceSyp = rate.sell_price * usdRate;
 
               return (
                 <tr key={rate.target_currency} className="hover:bg-muted/30 transition">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{meta.name_ar}</span>                      <span className="text-xs text-muted-foreground">{meta.symbol}</span>
+                      <span className="font-medium">{meta.name_ar}</span>
+                      <span className="text-xs text-muted-foreground">{meta.symbol}</span>
                     </div>
                   </td>
                   <td className="text-center p-3 font-mono font-medium">
-                    {formatNumber(buyInSyp, 0)} <span className="text-xs text-muted-foreground">USD</span>
+                    {/* ✅ هنا التعديل: 2 بدلاً من 0 */}
+                    {formatNumber(priceUsd, 2)} <span className="text-xs text-muted-foreground">USD</span>
                   </td>
                   <td className="text-center p-3 font-mono font-medium">
-                    {formatNumber(sellInSyp, 0)} <span className="text-xs text-muted-foreground">SYP</span>
+                    {formatNumber(priceSyp, 0)} <span className="text-xs text-muted-foreground">SYP</span>
                   </td>
                   <td className={`text-left p-3 font-medium flex items-center justify-end gap-1 ${change.color}`}>
                     <change.Icon className="h-3 w-3" />
@@ -115,15 +119,13 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
           </tbody>
         </table>
       </div>
-      
+
       <div className="p-3 bg-muted/30 text-xs text-muted-foreground text-center border-t border-muted">
         الأسعار مقابل الدولار الأمريكي • تم التحويل لليرة السورية باستخدام سعر البيع: {formatPrice(usdRate, 'SYP')}
       </div>
     </div>
   );
-}
-
-async function CurrencyContent() {
+}async function CurrencyContent() {
   const { usd, currencies, currencyInfo } = await getCurrencyData();
   
   if (!usd) {
