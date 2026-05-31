@@ -100,7 +100,7 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
                     </div>
                   </td>
                   <td className="text-center p-3 font-mono font-medium">
-                    {formatNumber(buyInSyp, 0)} <span className="text-xs text-muted-foreground">SYP</span>
+                    {formatNumber(buyInSyp, 0)} <span className="text-xs text-muted-foreground">USD</span>
                   </td>
                   <td className="text-center p-3 font-mono font-medium">
                     {formatNumber(sellInSyp, 0)} <span className="text-xs text-muted-foreground">SYP</span>
