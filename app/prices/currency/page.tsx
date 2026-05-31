@@ -80,8 +80,8 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
           <thead className="bg-muted/50">
             <tr>
               <th className="text-right p-3 font-medium">العملة</th>
-              <th className="text-center p-3 font-medium">سعر الشراء</th>
-              <th className="text-center p-3 font-medium">سعر البيع</th>
+              <th className="text-center p-3 font-medium">USD</th>
+              <th className="text-center p-3 font-medium">SYP</th>
               <th className="text-left p-3 font-medium">التغير 24س</th>
             </tr>
           </thead>
@@ -89,7 +89,7 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
             {currencies.map((rate) => {
               const meta = getCurrencyMeta(rate.target_currency);
               const change = getChangeUI(rate.change_24h || 0);
-              const buyInSyp = rate.buy_price * usdRate;
+              const buyInSyp = rate.buy_price ;
               const sellInSyp = rate.sell_price * usdRate;
 
               return (
