@@ -40,15 +40,14 @@ type CurrencyInfo = {
 // ✅ جلب البيانات من الخادم
 async function getCurrencyData() {
   const supabase = createServerSupabase();
-  
+
   const { data: usd } = await supabase
     .from('exchange_rates')
     .select('buy_price, sell_price, change_24h, fetched_at')
     .eq('base_currency', 'USD')
     .eq('target_currency', 'SYP')
     .eq('is_latest', true)
-    .maybeSingle();
-  const { data: currencies } = await supabase
+    .maybeSingle();  const { data: currencies } = await supabase
     .from('exchange_rates')
     .select('target_currency, buy_price, sell_price, change_24h, fetched_at')
     .eq('base_currency', 'USD')
@@ -97,8 +96,7 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
               return (
                 <tr key={rate.target_currency} className="hover:bg-muted/30 transition">
                   <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{meta.name_ar}</span>
+                    <div className="flex items-center gap-2">                      <span className="font-medium">{meta.name_ar}</span>
                       <span className="text-xs text-muted-foreground">{meta.symbol}</span>
                     </div>
                   </td>
@@ -125,9 +123,11 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
       </div>
     </div>
   );
-}async function CurrencyContent() {
+}
+
+async function CurrencyContent() {
   const { usd, currencies, currencyInfo } = await getCurrencyData();
-  
+
   if (!usd) {
     return (
       <div className="text-center py-12">
@@ -142,12 +142,12 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
 
   return (
     <div className="container mx-auto px-4 py-4 space-y-6">
-      
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">أسعار العملات</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            محدث {formatRelativeTime(usd.fetched_at)} • مصدر: LiraNews          </p>
+          <h1 className="text-xl font-bold">أسعار العملات</h1>          <p className="text-sm text-muted-foreground mt-1">
+            محدث {formatRelativeTime(usd.fetched_at)} • مصدر: LiraNews
+          </p>
         </div>
         <Link href="/" className="flex items-center gap-1 text-sm text-primary hover:underline">
           <ArrowLeft className="h-4 w-4" />
@@ -170,7 +170,7 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
             {change.text}
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-muted/30 rounded-lg p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">سعر الشراء</p>
@@ -194,9 +194,9 @@ function CurrencyTable({ currencies, currencyInfo, usdRate }: {
           </div>
         )}
       </div>
-
       <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground">
-        ⚠️ أسعار الصرف معروضة لأغراض إعلامية فقط. قد تختلف الأسعار الفعلية في مكاتب الصرافة.      </div>
+        ⚠️ أسعار الصرف معروضة لأغراض إعلامية فقط. قد تختلف الأسعار الفعلية في مكاتب الصرافة.
+      </div>
 
       {/* ✅ Schema.org مُصحح: العملة الأساسية USD، السعر معروض بـ SYP */}
       <script
@@ -243,5 +243,4 @@ export default function CurrencyPage() {
     }>
       <CurrencyContent />
     </Suspense>
-  );
-}
+  );}
