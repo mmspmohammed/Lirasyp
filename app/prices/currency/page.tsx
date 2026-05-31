@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 // ✅ تعريف الأنواع بدقة (بدون any)
 type CurrencyRate = {
   target_currency: string;
-  buy_price: number;
+  buy_price: string;
   sell_price: number;
   change_24h: number | null;
   fetched_at: string;
