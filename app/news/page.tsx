@@ -48,7 +48,8 @@ function NewsCard({
   const meta = CATEGORY_META[category as keyof typeof CATEGORY_META] || CATEGORY_META.economy;
 
   return (
-    <Link href={`/news/${slug}`} className="group block">
+  
+<Link href={`/news/${encodeURIComponent(slug)}`} className="group block">
       <article className="rounded-2xl bg-card p-5 border border-border transition-all duration-300 hover:shadow-lg hover:border-primary/20 hover:-translate-y-1">
         <div className="flex items-center gap-2 mb-3">
           <span
