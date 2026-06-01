@@ -93,7 +93,7 @@ function CurrencyRow({
           </div>
           <div className={`flex items-center gap-1 ${color}`}>
             
-            <span className="text-sm font-medium">{formatChange(change)}</span>
+            <span className="text-sm font-medium">{{change > 0 ? "+" : ""}{change.toFixed(2)}%}</span>
           </div>
         </div>
       </div>
@@ -202,7 +202,7 @@ export default async function CurrencyPage() {
                 <div className={`text-2xl font-bold ${getChangeUI(data.usdSyp.change_24h || 0).color}`}>
                   <span className="flex items-center justify-center gap-1">
                     {getChangeUI(data.usdSyp.change_24h || 0).icon}
-                    {formatChange(data.usdSyp.change_24h || 0)}
+                    {{data.usdSyp.change_24h || 0 > 0 ? "+" : ""}{data.usdSyp.change_24h || 0.toFixed(2)}%}
                   </span>
                 </div>
               </div>
