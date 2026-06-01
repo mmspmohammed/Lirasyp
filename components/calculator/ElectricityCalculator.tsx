@@ -1,59 +1,165 @@
-// components/calculator/ElectricityCalculator.tsx
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRates } from "@/hooks/useRates";
+import { useState, useMemo, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
 import { formatPrice } from "@/lib/format";
-import { Zap, Calculator, Info } from "lucide-react";
+import { Zap, Calculator, Info, Home, Factory } from "lucide-react";
 
-// بيانات افتراضية للشرائح (إذا ما كان فيه بيانات بالداتا بيس)
-const DEFAULT_TIERS = [
-  { tier_key: "1", tier_name_ar: "الشريحة الأولى", price_per_kwh: 50, max_kwh: 300 },
-  { tier_key: "2", tier_name_ar: "الشريحة الثانية", price_per_kwh: 125, max_kwh: 500 },
-  { tier_key: "3", tier_name_ar: "الشريحة الثالثة", price_per_kwh: 250, max_kwh: 800 },
-  { tier_key: "4", tier_name_ar: "الشريحة الرابعة", price_per_kwh: 450, max_kwh: 1000 },
-  { tier_key: "5", tier_name_ar: "الشريحة الخامسة", price_per_kwh: 650, max_kwh: Infinity },
-];
+type SectorType = "residential" | "commercial_industrial";
+
+interface Tariff {
+  id: string;
+  tier_key: string;
+  tier_name_ar: string;
+  price_per_kwh: number;
+  currency: string;
+}
 
 export default function ElectricityCalculator() {
-  const { rates, loading } = useRates();
+  const [sector, setSector] = useState<SectorType>("residential");
   const [consumption, setConsumption] = useState(300);
   const [showDetails, setShowDetails] = useState(false);
+  const [tariffs, setTariffs] = useState<Tariff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // نحاول نجيب أسعار الكهرباء من الداتا بيس، وإذا ما كان فيه نستخدم الافتراضي
-  // حالياً rates ما بيحتوي على electricity لأنه بيجيب من exchange_rates و asset_prices بس
-  // فلازم نستخدم بيانات افتراضية أو نضيف hook جديد
-  const tiers = DEFAULT_TIERS;
+  // ✅ جلب البيانات حصراً من سوبابيز
+  useEffect(() => {
+    async function fetchTariffs() {
+      try {
+        const supabase = createClient();
+        const { data, error: supaError } = await supabase
+          .from("electricity_tariffs")
+          .select("id, tier_key, tier_name_ar, price_per_kwh, currency")
+          .eq("is_active", true)
+          .order("tier_key");
 
+        if (supaError) throw supaError;
+        setTariffs(data || []);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTariffs();
+  }, []);
+
+  // بناء خريطة الأسعار من البيانات
+  const rates = useMemo(() => {
+    const map: Record<string, number> = {};
+    tariffs.forEach((t) => {
+      map[t.tier_key] = t.price_per_kwh;
+    });
+    return map;
+  }, [tariffs]);
+
+  // الحساب
   const calculation = useMemo(() => {
-    let remaining = consumption;
+    const under300 = rates["residential_under_300"] ?? 6;
+    const over300 = rates["residential_over_300"] ?? 14;
+    const commercial = rates["commercial"] ?? 14;
+    const industrial = rates["industrial"] ?? 14;
+
     let totalCost = 0;
     const breakdown: { tier: string; kwh: number; price: number; cost: number }[] = [];
 
-    for (const tier of tiers) {
-      if (remaining <= 0) break;
-      
-      const kwhInTier = Math.min(remaining, tier.max_kwh);
-      const cost = kwhInTier * tier.price_per_kwh;
-      
+    if (sector === "residential") {
+      if (consumption <= 300) {
+        const cost = consumption * under300;
+        breakdown.push({
+          tier: tariffs.find((t) => t.tier_key === "residential_under_300")?.tier_name_ar || "منزلي أقل من 300 كيلوواط",
+          kwh: consumption,
+          price: under300,
+          cost,
+        });
+        totalCost = cost;
+      } else {
+        // أول 300
+        const firstCost = 300 * under300;
+        breakdown.push({
+          tier: tariffs.find((t) => t.tier_key === "residential_under_300")?.tier_name_ar || "منزلي أقل من 300 كيلوواط",
+          kwh: 300,
+          price: under300,
+          cost: firstCost,
+        });
+
+        // الباقي
+        const rest = consumption - 300;
+        const restCost = rest * over300;
+        breakdown.push({
+          tier: tariffs.find((t) => t.tier_key === "residential_over_300")?.tier_name_ar || "منزلي أكثر من 300 كيلوواط",
+          kwh: rest,
+          price: over300,
+          cost: restCost,
+        });
+        totalCost = firstCost + restCost;
+      }
+    } else {
+      // صناعي وتجاري
+      const rate = commercial || industrial || 14;
+      const cost = consumption * rate;
       breakdown.push({
-        tier: tier.tier_name_ar,
-        kwh: kwhInTier,
-        price: tier.price_per_kwh,
+        tier: "صناعي وتجاري",
+        kwh: consumption,
+        price: rate,
         cost,
       });
-      
-      totalCost += cost;
-      remaining -= kwhInTier;
+      totalCost = cost;
     }
 
     return { totalCost, breakdown };
-  }, [consumption, tiers]);
+  }, [consumption, sector, rates, tariffs]);
 
   const avgPrice = consumption > 0 ? calculation.totalCost / consumption : 0;
 
+  if (loading) {
+    return (
+      <div className="rounded-2xl bg-card p-6 animate-pulse space-y-4">
+        <div className="h-12 bg-muted rounded-xl" />
+        <div className="h-20 bg-muted rounded-xl" />
+        <div className="h-40 bg-muted rounded-xl" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl bg-card p-6 text-center">
+        <p className="text-danger mb-2">⚠️ تعذر تحميل بيانات الكهرباء</p>
+        <p className="text-sm text-muted-foreground">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* ✅ خيارين: منزلي / صناعي وتجاري */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => setSector("residential")}
+          className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition ${
+            sector === "residential"
+              ? "bg-primary text-white border-primary"
+              : "bg-muted border-border hover:border-primary/50"
+          }`}
+        >
+          <Home className="w-5 h-5" />
+          <span className="font-medium">منزلي</span>
+        </button>
+        <button
+          onClick={() => setSector("commercial_industrial")}
+          className={`flex items-center justify-center gap-2 p-3 rounded-xl border transition ${
+            sector === "commercial_industrial"
+              ? "bg-primary text-white border-primary"
+              : "bg-muted border-border hover:border-primary/50"
+          }`}
+        >
+          <Factory className="w-5 h-5" />
+          <span className="font-medium">صناعي وتجاري</span>
+        </button>
+      </div>
+
       {/* Consumption Input */}
       <div>
         <label className="block text-sm font-medium mb-2 flex items-center gap-2">
@@ -128,7 +234,7 @@ export default function ElectricityCalculator() {
       {/* Detailed Breakdown */}
       {showDetails && (
         <div className="rounded-2xl bg-card border border-border p-4 space-y-2">
-          <h4 className="font-bold text-sm mb-3">تفصيل الشرائح:</h4>
+          <h4 className="font-bold text-sm mb-3">تفصيل الحساب:</h4>
           {calculation.breakdown.map((item, index) => (
             <div
               key={index}
@@ -136,7 +242,7 @@ export default function ElectricityCalculator() {
             >
               <div className="flex items-center gap-2">
                 <span className="text-xs px-2 py-1 rounded bg-yellow-500/10 text-yellow-600">
-                  شريحة {index + 1}
+                  {index + 1}
                 </span>
                 <span className="text-sm">{item.tier}</span>
               </div>
@@ -165,11 +271,9 @@ export default function ElectricityCalculator() {
       <div className="rounded-xl bg-muted/50 p-3 flex items-start gap-2">
         <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground">
-          ⚠️ هاد تقدير تقريبي. الأسعار الفعلية قد تختلف حسب المنطقة والاستهلاك الفعلي.
-          شرائح الكهرباء تتدرج حسب كمية الاستهلاك.
+        الأسعار مأخوذة من قرار وزارة الكهرباء الرسمي.
         </p>
       </div>
     </div>
   );
 }
-
