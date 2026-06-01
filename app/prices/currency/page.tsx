@@ -1,246 +1,261 @@
-import { Suspense } from 'react';
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { createServerSupabase } from '@/lib/supabase-server';
-import { formatPrice, getChangeUI, formatRelativeTime, formatNumber } from '@/lib/format';
-import { SITE_URL } from '@/lib/env';
-
-// ✅ إعادة التحقق كل 5 دقائق (300 ثانية)
-export const revalidate = 300;
+// app/prices/currency/page.tsx
+import { Suspense } from "react";
+import Link from "next/link";
+import { createServerClient } from "@/lib/supabase-server";
+import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
+import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, RefreshCw } from "lucide-react";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'أسعار الدولار والعملات في سوريا | الليرة عملتنا',
-  description: 'أسعار الدولار الأمريكي، اليورو، الليرة التركية، والريال السعودي مقابل الليرة السورية - تحديث لحظي كل 5 دقائق',
-  keywords: ['سعر الدولار سوريا', 'صرف العملات', 'يورو سوري', 'ليرة تركية', 'ريال سعودي'],
-  alternates: { canonical: `${SITE_URL}/prices/currency` },
+  title: "أسعار العملات | الدولار والليرة السورية",
+  description:
+    "أسعار صرف الدولار الأمريكي مقابل الليرة السورية واليورو والليرة التركية والريال السعودي. تحديث لحظي من مصادر موثوقة.",
+  keywords: [
+    "سعر الدولار",
+    "الليرة السورية",
+    "صرف العملات",
+    "يورو",
+    "ليرة تركية",
+    "ريال سعودي",
+    "درهم إماراتي",
+  ],
   openGraph: {
-    title: 'أسعار الدولار والعملات | الليرة عملتنا',
-    description: 'أسعار العملات العالمية مقابل الليرة السورية - تحديث لحظي',
-    url: `${SITE_URL}/prices/currency`,
-    type: 'website',
+    title: "أسعار العملات | LiraSYP",
+    description: "أسعار صرف الدولار والليرة السورية محدثة لحظياً.",
   },
 };
 
-// ✅ تعريف الأنواع بدقة (بدون any)
-type CurrencyRate = {
-  target_currency: string;
-  buy_price: string;
-  sell_price: number;
-  change_24h: number | null;
-  fetched_at: string;
-};
+export const revalidate = 60;
 
-type CurrencyInfo = {
-  code: string;
-  name_ar: string;
-  symbol: string;
-};
+// ==================== Components ====================
 
-// ✅ جلب البيانات من الخادم
-async function getCurrencyData() {
-  const supabase = createServerSupabase();
-
-  const { data: usd } = await supabase
-    .from('exchange_rates')
-    .select('buy_price, sell_price, change_24h, fetched_at')
-    .eq('base_currency', 'USD')
-    .eq('target_currency', 'SYP')
-    .eq('is_latest', true)
-    .maybeSingle();  const { data: currencies } = await supabase
-    .from('exchange_rates')
-    .select('target_currency, buy_price, sell_price, change_24h, fetched_at')
-    .eq('base_currency', 'USD')
-    .eq('is_latest', true)
-    .in('target_currency', ['EUR', 'TRY', 'SAR', 'AED', 'GBP', 'JOD', 'CHF'])
-    .order('target_currency');
-
-  const { data: currencyInfo } = await supabase
-    .from('currencies')
-    .select('code, name_ar, symbol')
-    .in('code', ['USD', 'EUR', 'TRY', 'SAR', 'AED', 'GBP', 'JOD', 'CHF']);
-
-  return { usd, currencies: currencies || [], currencyInfo: currencyInfo || [] };
-}
-
-// ✅ مكون جدول العملات (بأنواع دقيقة + عرض منزلتين عشريتين لـ USD)
-function CurrencyTable({ currencies, currencyInfo, usdRate }: {
-  currencies: CurrencyRate[];
-  currencyInfo: CurrencyInfo[];
-  usdRate: number;
+function CurrencyRow({
+  currency,
+  buyPrice,
+  sellPrice,
+  change,
+  isMain = false,
+}: {
+  currency: string;
+  buyPrice: number;
+  sellPrice: number;
+  change: number;
+  isMain?: boolean;
 }) {
-  const getCurrencyMeta = (code: string) => 
-    currencyInfo.find(c => c.code === code) || { name_ar: code, symbol: code };
+  const { icon, color } = getChangeUI(change);
 
   return (
-    <div className="bg-card rounded-xl border border-muted overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-right p-3 font-medium">العملة</th>
-              <th className="text-center p-3 font-medium">USD</th>
-              <th className="text-center p-3 font-medium">SYP</th>
-              <th className="text-left p-3 font-medium">التغير 24س</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-muted">
-            {currencies.map((rate) => {
-              const meta = getCurrencyMeta(rate.target_currency);
-              const change = getChangeUI(rate.change_24h || 0);
-              
-              // ✅ عرض السعر بالدولار بمنزلتين عشريتين
-              const priceUsd = parseFloat(rate.buy_price as any);
-              const priceSyp = rate.sell_price * usdRate;
-
-              return (
-                <tr key={rate.target_currency} className="hover:bg-muted/30 transition">
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">                      <span className="font-medium">{meta.name_ar}</span>
-                      <span className="text-xs text-muted-foreground">{meta.symbol}</span>
-                    </div>
-                  </td>
-                  <td className="text-center p-3 font-mono font-medium">
-                    {/* ✅ هنا التعديل: 2 بدلاً من 0 */}
-                    {formatNumber(priceUsd, 2)} <span className="text-xs text-muted-foreground">USD</span>
-                  </td>
-                  <td className="text-center p-3 font-mono font-medium">
-                    {formatNumber(priceSyp, 0)} <span className="text-xs text-muted-foreground">SYP</span>
-                  </td>
-                  <td className={`text-left p-3 font-medium flex items-center justify-end gap-1 ${change.color}`}>
-                    <change.Icon className="h-3 w-3" />
-                    {change.text}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <div
+      className={`
+        flex items-center justify-between p-4 rounded-xl border transition
+        ${isMain
+          ? "bg-primary/5 border-primary/20"
+          : "bg-card border-border hover:border-primary/20"
+        }
+      `}
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-2xl">
+          {currency === "USD" && "🇺🇸"}
+          {currency === "SYP" && "🇸🇾"}
+          {currency === "EUR" && "🇪🇺"}
+          {currency === "TRY" && "🇹🇷"}
+          {currency === "SAR" && "🇸🇦"}
+          {currency === "AED" && "🇦🇪"}
+          {currency === "GBP" && "🇬🇧"}
+          {currency === "JOD" && "🇯🇴"}
+          {currency === "CHF" && "🇨🇭"}
+        </span>
+        <div>
+          <p className="font-bold">{currency}</p>
+          <p className="text-xs text-muted-foreground">
+            {currency === "USD" && "دولار أمريكي"}
+            {currency === "SYP" && "ليرة سورية"}
+            {currency === "EUR" && "يورو"}
+            {currency === "TRY" && "ليرة تركية"}
+            {currency === "SAR" && "ريال سعودي"}
+            {currency === "AED" && "درهم إماراتي"}
+            {currency === "GBP" && "جنيه إسترليني"}
+            {currency === "JOD" && "دينار أردني"}
+            {currency === "CHF" && "فرنك سويسري"}
+          </p>
+        </div>
       </div>
-
-      <div className="p-3 bg-muted/30 text-xs text-muted-foreground text-center border-t border-muted">
-        الأسعار مقابل الدولار الأمريكي • تم التحويل لليرة السورية باستخدام سعر البيع: {formatPrice(usdRate, 'SYP')}
+      <div className="text-left">
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">شراء</p>
+            <p className="font-bold">{formatPrice(buyPrice, currency === "SYP" ? "SYP" : "USD")}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">مبيع</p>
+            <p className="font-bold">{formatPrice(sellPrice, currency === "SYP" ? "SYP" : "USD")}</p>
+          </div>
+          <div className={`flex items-center gap-1 ${color}`}>
+            {icon}
+            <span className="text-sm font-medium">{formatChange(change)}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-async function CurrencyContent() {
-  const { usd, currencies, currencyInfo } = await getCurrencyData();
+// ==================== Data Fetching ====================
 
-  if (!usd) {
-    return (
-      <div className="text-center py-12">
-        <RefreshCw className="h-8 w-8 mx-auto text-muted-foreground animate-spin mb-3" />
-        <p className="text-muted-foreground">جاري تحميل أسعار الصرف...</p>
-      </div>
-    );
-  }
+async function getCurrencyData() {
+  const supabase = createServerClient();
 
-  const usdRate = usd.sell_price;
-  const change = getChangeUI(usd.change_24h || 0);
+  // جلب USD/SYP (الرئيسي)
+  const { data: usdSyp } = await supabase
+    .from("exchange_rates")
+    .select("buy_price, sell_price, change_24h, fetched_at")
+    .eq("base_currency", "USD")
+    .eq("target_currency", "SYP")
+    .eq("is_latest", true)
+    .order("fetched_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  // جلب العملات العالمية
+  const { data: currencies } = await supabase
+    .from("exchange_rates")
+    .select("target_currency, buy_price, sell_price, change_24h, fetched_at")
+    .eq("base_currency", "USD")
+    .neq("target_currency", "SYP")
+    .eq("is_latest", true)
+    .order("fetched_at", { ascending: false });
+
+  // إزالة التكرارات (آخر سعر لكل عملة)
+  const uniqueCurrencies = currencies
+    ? Array.from(
+        new Map(currencies.map((c) => [c.target_currency, c])).values()
+      )
+    : [];
+
+  return { usdSyp, currencies: uniqueCurrencies };
+}
+
+// ==================== Main Page ====================
+
+export default async function CurrencyPage() {
+  const data = await getCurrencyData();
+
+  const lastUpdated = data.usdSyp?.fetched_at
+    ? new Date(data.usdSyp.fetched_at).toLocaleString("ar-SY", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   return (
-    <div className="container mx-auto px-4 py-4 space-y-6">
+    <div className="container mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+        <Link href="/" className="hover:text-primary transition">الرئيسية</Link>
+        <ArrowLeft className="w-4 h-4" />
+        <span>أسعار العملات</span>
+      </nav>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold">أسعار العملات</h1>          <p className="text-sm text-muted-foreground mt-1">
-            محدث {formatRelativeTime(usd.fetched_at)} • مصدر: LiraNews
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-extrabold mb-2 flex items-center gap-2">
+          <DollarSign className="w-8 h-8 text-primary" />
+          أسعار العملات
+        </h1>
+        <p className="text-muted-foreground">
+          أسعار صرف الدولار الأمريكي مقابل الليرة السورية والعملات العالمية
+        </p>
+        {lastUpdated && (
+          <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" />
+            آخر تحديث: {lastUpdated}
           </p>
-        </div>
-        <Link href="/" className="flex items-center gap-1 text-sm text-primary hover:underline">
-          <ArrowLeft className="h-4 w-4" />
-          الرئيسية
-        </Link>
-      </div>
-
-      {/* بطاقة الدولار الرئيسية */}
-      <div className="bg-card rounded-xl p-4 border border-muted">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">💵</span>
-            <div>
-              <h2 className="font-bold">الدولار الأمريكي / الليرة السورية</h2>
-              <p className="text-xs text-muted-foreground">USD/SYP</p>
-            </div>
-          </div>
-          <div className={`flex items-center gap-1 text-sm font-medium ${change.color}`}>
-            <change.Icon className="h-4 w-4" />
-            {change.text}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">سعر الشراء</p>
-            <p className="text-lg font-bold font-mono">{formatPrice(usd.buy_price, 'SYP')}</p>
-          </div>
-          <div className="bg-muted/30 rounded-lg p-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">سعر البيع</p>
-            <p className="text-lg font-bold font-mono">{formatPrice(usd.sell_price, 'SYP')}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* جدول العملات الأخرى */}
-      <div>
-        <h3 className="font-bold mb-3">العملات العالمية مقابل الدولار</h3>
-        {currencies.length > 0 ? (
-          <CurrencyTable currencies={currencies} currencyInfo={currencyInfo} usdRate={usdRate} />
-        ) : (
-          <div className="bg-card rounded-xl p-6 border border-muted text-center text-muted-foreground">
-            لا توجد بيانات عملات متوفرة حالياً
-          </div>
         )}
       </div>
-      <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground">
-        ⚠️ أسعار الصرف معروضة لأغراض إعلامية فقط. قد تختلف الأسعار الفعلية في مكاتب الصرافة.
-      </div>
 
-      {/* ✅ Schema.org مُصحح: العملة الأساسية USD، السعر معروض بـ SYP */}
+      {/* USD/SYP Main Card */}
+      {data.usdSyp && (
+        <section className="mb-8">
+          <h2 className="text-lg font-bold mb-4">الدولار / ليرة سورية</h2>
+          <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 p-6">
+            <div className="grid md:grid-cols-3 gap-6 text-center">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">سعر الشراء</p>
+                <p className="text-4xl font-extrabold text-primary">
+                  {formatPrice(data.usdSyp.buy_price, "SYP")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">ليرة سورية</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">سعر المبيع</p>
+                <p className="text-4xl font-extrabold text-primary">
+                  {formatPrice(data.usdSyp.sell_price, "SYP")}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">ليرة سورية</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">التغير 24 ساعة</p>
+                <div className={`text-2xl font-bold ${getChangeUI(data.usdSyp.change_24h || 0).color}`}>
+                  <span className="flex items-center justify-center gap-1">
+                    {getChangeUI(data.usdSyp.change_24h || 0).icon}
+                    {formatChange(data.usdSyp.change_24h || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Currencies Table */}
+      <section>
+        <h2 className="text-lg font-bold mb-4">العملات العالمية</h2>
+        {data.currencies.length > 0 ? (
+          <div className="space-y-3">
+            {data.currencies.map((c: any) => (
+              <CurrencyRow
+                key={c.target_currency}
+                currency={c.target_currency}
+                buyPrice={c.buy_price}
+                sellPrice={c.sell_price}
+                change={parseFloat(c.change_24h) || 0}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl bg-card p-8 text-center border border-border">
+            <p className="text-muted-foreground">لا توجد بيانات متاحة حالياً</p>
+          </div>
+        )}
+      </section>
+
+      {/* SEO Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'ExchangeRateSpecification',
-            currency: 'USD', // ✅ العملة الأساسية
-            currentExchangeRate: {
-              '@type': 'UnitPriceSpecification',
-              price: usd.buy_price,
-              priceCurrency: 'SYP', // ✅ العملة المعروض بها السعر
+            "@context": "https://schema.org",
+            "@type": "FinancialProduct",
+            name: "أسعار صرف العملات",
+            description: "أسعار صرف الدولار والليرة السورية والعملات العالمية",
+            provider: {
+              "@type": "Organization",
+              name: "LiraSYP",
             },
-            name: `سعر الدولار الأمريكي مقابل الليرة السورية`,
-            description: `سعر الشراء: ${usd.buy_price} SYP، سعر البيع: ${usd.sell_price} SYP`,
+            ...(data.usdSyp && {
+              offers: {
+                "@type": "Offer",
+                price: data.usdSyp.sell_price,
+                priceCurrency: "SYP",
+              },
+            }),
           }),
         }}
       />
     </div>
   );
 }
-
-export default function CurrencyPage() {
-  return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <div className="h-8 bg-muted rounded w-48 animate-pulse" />
-        <div className="bg-card rounded-xl p-4 border border-muted animate-pulse">
-          <div className="h-6 bg-muted rounded w-32 mb-4" />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-16 bg-muted rounded" />
-            <div className="h-16 bg-muted rounded" />
-          </div>
-        </div>
-        <div className="h-6 bg-muted rounded w-40 animate-pulse" />
-        <div className="bg-card rounded-xl border border-muted animate-pulse">
-          <div className="h-10 bg-muted rounded m-3" />
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 bg-muted/50 rounded m-3" />
-          ))}
-        </div>
-      </div>
-    }>
-      <CurrencyContent />
-    </Suspense>
-  );}
