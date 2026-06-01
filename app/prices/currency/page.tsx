@@ -96,13 +96,13 @@ export default async function CurrencyPage() {
           <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 p-6">
             <div className="grid md:grid-cols-3 gap-6 text-center">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">سعر الشراء</p>
-                <p className="text-4xl font-extrabold text-primary">{formatPrice(data.usdSyp.buy_price, "SYP")}</p>
+                <p className="text-sm text-muted-foreground mb-1">سعر المبيع</p>
+                <p className="text-4xl font-extrabold text-primary">{formatPrice(data.usdSyp.sell_price, "SYP")}</p>
                 <p className="text-xs text-muted-foreground mt-1">ليرة سورية</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">سعر المبيع</p>
-                <p className="text-4xl font-extrabold text-primary">{formatPrice(data.usdSyp.sell_price, "SYP")}</p>
+                <p className="text-sm text-muted-foreground mb-1">سعر الشراء</p>
+                <p className="text-4xl font-extrabold text-primary">{formatPrice(data.usdSyp.buy_price, "SYP")}</p>
                 <p className="text-xs text-muted-foreground mt-1">ليرة سورية</p>
               </div>
               <div>
@@ -119,7 +119,7 @@ export default async function CurrencyPage() {
         {data.currencies && data.currencies.length > 0 ? (
           <div className="space-y-3">
             {data.currencies.map((c: any) => (
-              <CurrencyRow key={c.target_currency} currency={c.target_currency} buyPrice={c.buy_price} sellPrice={c.sell_price} change={parseFloat(c.change_24h) || 0} />
+              <CurrencyRow key={c.target_currency} currency={c.target_currency} buyPrice={c.buy_price} sellPrice={c.buy_price*usdSyp.sell_price} change={parseFloat(c.change_24h) || 0} />
             ))}
           </div>
         ) : (
