@@ -1,6 +1,6 @@
 // app/prices/gold/page.tsx
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase} from "@/lib/supabase-server";
 import { formatPrice, formatChange, getChangeUI, calculateGoldGrams } from "@/lib/format";
 import { ArrowLeft, TrendingUp, TrendingDown, Gem } from "lucide-react";
 import type { Metadata } from "next";
@@ -95,7 +95,7 @@ function KaratRow({
 // ==================== Data Fetching ====================
 
 async function getGoldData() {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
 
   // جلب سعر الذهب (أونصة)
   const { data: gold } = await supabase
