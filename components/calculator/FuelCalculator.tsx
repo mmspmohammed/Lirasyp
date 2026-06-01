@@ -17,10 +17,10 @@ interface FuelItem {
 }
 
 const TYPE_META: Record<string, { icon: string; color: string; tank_sizes: number[] }> = {
-  gasoline_95: { icon: "⛽", color: "#ef4444"},
-  gasoline_90: { icon: "⛽", color: "#dc2626" },
-  diesel: { icon: "🛢️", color: "#f97316" },
-  gas_cylinder: { icon: "🔥", color: "#3b82f6" },
+  gasoline_95: { icon: "⛽", color: "#ef4444", tank_sizes: [30, 40, 50, 60] },
+  gasoline_90: { icon: "⛽", color: "#dc2626", tank_sizes: [30, 40, 50, 60] },
+  diesel: { icon: "🛢️", color: "#f97316", tank_sizes: [100, 200, 500, 1000] },
+  gas_cylinder: { icon: "🔥", color: "#3b82f6", tank_sizes: [1, 2, 3, 5] },
 };
 
 export default function FuelCalculator() {
