@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-function CurrencyRow({ currency, buyPrice, sellPrice, change }: {
-  currency: string; buyPrice: number; sellPrice: number; change: number;
+function CurrencyRow({ currency, buyPrice, change, usdSypRate }: {
+  currency: string; buyPrice: number; change: number; usdSypRate: number;
 }) {
   const { color: changeColor } = getChangeUI(change);
   const flagMap: Record<string, string> = {
@@ -24,6 +24,9 @@ function CurrencyRow({ currency, buyPrice, sellPrice, change }: {
     USD: "دولار أمريكي", SYP: "ليرة سورية", EUR: "يورو", TRY: "ليرة تركية",
     SAR: "ريال سعودي", AED: "درهم إماراتي", GBP: "جنيه إسترليني", JOD: "دينار أردني", CHF: "فرنك سويسري"
   };
+
+  // ✅ السعر بالليرة السورية = سعر العملة بالدولار × سعر الدولار بالليرة
+  const priceSyp = buyPrice * usdSypRate;
 
   return (
     <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/20 transition">
@@ -37,12 +40,12 @@ function CurrencyRow({ currency, buyPrice, sellPrice, change }: {
       <div className="text-left">
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">شراء</p>
-            <p className="font-bold">{formatPrice(buyPrice, currency === "SYP" ? "SYP" : "USD")}</p>
+            <p className="text-xs text-muted-foreground">السعر بالدولار</p>
+            <p className="font-bold">{formatPrice(buyPrice, "USD")}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">مبيع</p>
-            <p className="font-bold">{formatPrice(sellPrice, currency === "SYP" ? "SYP" : "USD")}</p>
+            <p className="text-xs text-muted-foreground">السعر بالليرة</p>
+            <p className="font-bold">{formatPrice(priceSyp, "SYP")}</p>
           </div>
           <div className={"flex items-center gap-1 " + changeColor}>
             <span className="text-sm font-medium">{change > 0 ? "+" : ""}{change.toFixed(2)}%</span>
@@ -60,13 +63,20 @@ async function getCurrencyData() {
     .select("buy_price, sell_price, change_24h, fetched_at")
     .eq("base_currency", "USD").eq("target_currency", "SYP").eq("is_latest", true)
     .order("fetched_at", { ascending: false }).limit(1).single();
+  
   const { data: currencies } = await supabase
     .from("exchange_rates")
     .select("target_currency, buy_price, sell_price, change_24h, fetched_at")
     .eq("base_currency", "USD").neq("target_currency", "SYP").eq("is_latest", true)
     .order("fetched_at", { ascending: false });
+  
   const uniqueCurrencies = currencies ? Array.from(new Map(currencies.map((c: any) => [c.target_currency, c])).values()) : [];
-  return { usdSyp, currencies: uniqueCurrencies };
+  
+  // ✅ فصل TRY عن باقي العملات
+  const tryCurrency = uniqueCurrencies.find((c: any) => c.target_currency === "TRY");
+  const otherCurrencies = uniqueCurrencies.filter((c: any) => c.target_currency !== "TRY");
+  
+  return { usdSyp, tryCurrency, currencies: otherCurrencies };
 }
 
 export default async function CurrencyPage() {
@@ -90,6 +100,7 @@ export default async function CurrencyPage() {
         {lastUpdated && <p className="text-sm text-muted-foreground mt-2 flex items-center gap-1"><RefreshCw className="w-3 h-3" />آخر تحديث: {lastUpdated}</p>}
       </div>
 
+      {/* ✅ كرت الدولار / ليرة سورية */}
       {data.usdSyp && (
         <section className="mb-8">
           <h2 className="text-lg font-bold mb-4">الدولار / ليرة سورية</h2>
@@ -114,12 +125,44 @@ export default async function CurrencyPage() {
         </section>
       )}
 
+      {/* ✅ كرت الليرة التركية / ليرة سورية */}
+      {data.tryCurrency && data.usdSyp && (
+        <section className="mb-8">
+          <h2 className="text-lg font-bold mb-4">الليرة التركية / ليرة سورية</h2>
+          <div className="rounded-2xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/20 p-6">
+            <div className="grid md:grid-cols-3 gap-6 text-center">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">سعر المبيع</p>
+                <p className="text-4xl font-extrabold text-red-600">{formatPrice(data.tryCurrency.sell_price * data.usdSyp.sell_price, "SYP")}</p>
+                <p className="text-xs text-muted-foreground mt-1">ليرة سورية</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">سعر الشراء</p>
+                <p className="text-4xl font-extrabold text-red-600">{formatPrice(data.tryCurrency.buy_price * data.usdSyp.sell_price, "SYP")}</p>
+                <p className="text-xs text-muted-foreground mt-1">ليرة سورية</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">التغير 24 ساعة</p>
+                <div className="text-2xl font-bold">{(data.tryCurrency.change_24h || 0) > 0 ? "+" : ""}{(data.tryCurrency.change_24h || 0).toFixed(2)}%</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ✅ جدول العملات العالمية (بدون TRY) - بيعرض بالدولار والليرة */}
       <section>
         <h2 className="text-lg font-bold mb-4">العملات العالمية</h2>
         {data.currencies && data.currencies.length > 0 ? (
           <div className="space-y-3">
             {data.currencies.map((c: any) => (
-              <CurrencyRow key={c.target_currency} currency={c.target_currency} buyPrice={c.buy_price} sellPrice={c.buy_price*usdSyp.sell_price} change={parseFloat(c.change_24h) || 0} />
+              <CurrencyRow 
+                key={c.target_currency} 
+                currency={c.target_currency} 
+                buyPrice={c.buy_price} 
+                change={parseFloat(c.change_24h) || 0} 
+                usdSypRate={data.usdSyp?.sell_price || 0}
+              />
             ))}
           </div>
         ) : (
