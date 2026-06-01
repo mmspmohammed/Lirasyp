@@ -97,9 +97,7 @@ export default async function HomePage() {
             </div>
             <div>
               <h3 className="font-bold text-base">🔔 فعّل التنبيهات لتصلك الإشعارات في لحظة تغيرها</h3>
-              <p className="text-sm text-muted-foreground">
-                احصل على إشعارات فورية عند تغير أسعار الدولار، الذهب، والعملات الرقمية.
-              </p>
+             
             </div>
           </div>
           <button className="px-5 py-2.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition shadow-lg shadow-red-500/20 shrink-0">
@@ -108,40 +106,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Currencies Table */}
-      {data.currencies.length > 0 && (
-        <section className="mb-12">
-          <SectionHeader title="العملات العالمية" href="/prices/currency" />
-          <div className="rounded-2xl bg-card border border-border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-right text-sm font-medium">العملة</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium">السعر (USD)</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium">التغير 24h</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {data.currencies.map((c: any) => {
-                    const change = parseFloat(c.change_24h) || 0;
-                    const { color } = getChangeUI(change);
-                    return (
-                      <tr key={c.target_currency} className="hover:bg-muted/30 transition">
-                        <td className="px-4 py-3 font-medium">{c.target_currency}</td>
-                        <td className="px-4 py-3">{formatPrice(c.buy_price, "USD")}</td>
-                        <td className={`px-4 py-3 ${color}`}>
-                          <span className="flex items-center gap-1">{change > 0 ? "+" : ""}{change.toFixed(2)}%</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* News Section - بدون نوع الخبر */}
       {data.news.length > 0 && (
