@@ -1,6 +1,7 @@
 // app/news/page.tsx
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
+const supabase = createServerSupabase();
 import { formatRelativeTime } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/categories";
 import { ArrowLeft, Newspaper, Calendar, Tag } from "lucide-react";
