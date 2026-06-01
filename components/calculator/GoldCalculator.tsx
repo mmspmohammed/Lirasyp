@@ -10,6 +10,7 @@ const KARATS = [
   { name: "22 قيراط", purity: 0.916, color: "#E5C100" },
   { name: "21 قيراط", purity: 0.875, color: "#D4AF37" },
   { name: "18 قيراط", purity: 0.75, color: "#C5A028" },
+  { name: "14 قيراط", purity: 0.5833, color: "#FFD700" },
 ];
 
 export default function GoldCalculator() {
