@@ -12,7 +12,7 @@ export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Promise<<Metadata> {
+}): Promise<Metadata> {
   try {
     const supabase = createServerSupabase();
     const slug = decodeURIComponent(params.slug || "");
