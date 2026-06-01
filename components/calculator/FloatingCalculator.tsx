@@ -1,5 +1,4 @@
 // components/calculator/FloatingCalculator.tsx
-
 "use client";
 
 import { useState } from "react";
