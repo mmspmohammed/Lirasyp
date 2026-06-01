@@ -177,31 +177,7 @@ export default function RootLayout({
                       نقدم بيانات دقيقة ومحدثة من مصادر موثوقة.
                     </p>
                   </div>
-                  <div>
-                    <h3 className="mb-3 text-lg font-bold">روابط سريعة</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li>
-                        <a href="/prices/currency" className="text-muted-foreground hover:text-primary transition">
-                          💵 أسعار العملات
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/prices/gold" className="text-muted-foreground hover:text-primary transition">
-                          🥇 أسعار الذهب
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/prices/crypto" className="text-muted-foreground hover:text-primary transition">
-                          ₿ العملات الرقمية
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/news" className="text-muted-foreground hover:text-primary transition">
-                          📰 الأخبار الاقتصادية
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
+                  
                   <div>
                     <h3 className="mb-3 text-lg font-bold">معلومات</h3>
                     <ul className="space-y-2 text-sm">
