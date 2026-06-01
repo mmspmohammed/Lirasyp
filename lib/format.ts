@@ -7,16 +7,6 @@ import {
   LucideIcon,
 } from 'lucide-react';
 
-import createDOMPurify from 'dompurify';
-import { JSDOM } from 'jsdom';
-
-const window = new JSDOM('').window;
-
-// ✅ حل مشكلة Netlify + TypeScript
-const purify = createDOMPurify(
-  window as unknown as Window & typeof globalThis
-);
-
 /**
  * سياسة صارمة: جميع الأرقام تعرض باللغة الإنجليزية
  */
@@ -156,81 +146,86 @@ export const calculateGoldGrams = (
   return {
     gram24k: {
       usd: gram24k_usd,
-      syp:
-        rate > 0
-          ? gram24k_usd * rate
-          : null,
+      syp: rate > 0 ? gram24k_usd * rate : null,
     },
-
     gram22k: {
       usd: gram24k_usd * 0.916,
-      syp:
-        rate > 0
-          ? gram24k_usd * 0.916 * rate
-          : null,
+      syp: rate > 0 ? gram24k_usd * 0.916 * rate : null,
     },
-
     gram21k: {
       usd: gram24k_usd * 0.875,
-      syp:
-        rate > 0
-          ? gram24k_usd * 0.875 * rate
-          : null,
+      syp: rate > 0 ? gram24k_usd * 0.875 * rate : null,
     },
-
     gram18k: {
       usd: gram24k_usd * 0.75,
-      syp:
-        rate > 0
-          ? gram24k_usd * 0.75 * rate
-          : null,
+      syp: rate > 0 ? gram24k_usd * 0.75 * rate : null,
     },
-
     gram14k: {
       usd: gram24k_usd * 0.585,
-      syp:
-        rate > 0
-          ? gram24k_usd * 0.585 * rate
-          : null,
+      syp: rate > 0 ? gram24k_usd * 0.585 * rate : null,
     },
   };
 };
 
+/**
+ * ✅ sanitizeHTML بدون jsdom - يشتغل server + client
+ * بيستخدم regex بسيط لإزالة الـ tags الخطرة
+ */
 export const sanitizeHTML = (
   html: string
 ): string => {
   if (!html) return '';
 
-  return purify.sanitize(html, {
-    ALLOWED_TAGS: [
-      'p',
-      'br',
-      'strong',
-      'em',
-      'u',
-      'h1',
-      'h2',
-      'h3',
-      'ul',
-      'ol',
-      'li',
-      'a',
-      'img',
-    ],
+  // إزالة script tags ومحتواهن
+  let clean = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 
-    ALLOWED_ATTR: [
-      'href',
-      'src',
-      'alt',
-      'title',
-      'target',
-      'rel',
-    ],
+  // إزالة style tags ومحتواهن
+  clean = clean.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
 
-    FORBID_ATTR: [
-      'onerror',
-      'onload',
-      'onclick',
-    ],
+  // إزالة event handlers (onclick, onerror, etc.)
+  clean = clean.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+
+  // إزالة javascript: URLs
+  clean = clean.replace(/javascript:/gi, '');
+
+  // السماح بـ tags آمنة فقط
+  const allowedTags = [
+    'p', 'br', 'strong', 'em', 'u', 'b', 'i',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'ul', 'ol', 'li', 'a', 'img', 'span', 'div'
+  ];
+
+  // إزالة كل tags مش مسموح فيها
+  const tagRegex = /<(\/?)([\w]+)[^>]*>/g;
+  clean = clean.replace(tagRegex, (match, closing, tag) => {
+    const lowerTag = tag.toLowerCase();
+    if (allowedTags.includes(lowerTag)) {
+      // للـ a tag: نتحقق من الـ href
+      if (lowerTag === 'a') {
+        const hrefMatch = match.match(/href\s*=\s*["']([^"']*)["']/i);
+        if (hrefMatch) {
+          const href = hrefMatch[1];
+          if (href.startsWith('javascript:') || href.startsWith('data:')) {
+            return `<${closing}a href="#">`;
+          }
+        }
+        return match;
+      }
+      // للـ img tag: نتحقق من الـ src
+      if (lowerTag === 'img') {
+        const srcMatch = match.match(/src\s*=\s*["']([^"']*)["']/i);
+        if (srcMatch) {
+          const src = srcMatch[1];
+          if (src.startsWith('javascript:') || src.startsWith('data:')) {
+            return '';
+          }
+        }
+        return match;
+      }
+      return match;
+    }
+    return '';
   });
+
+  return clean;
 };
