@@ -25,14 +25,14 @@ export default function CurrencyCalculator() {
 
   const result = useMemo(() => {
     if (loading || !rates[from] || !rates[to]) return null;
-    
+
     // التحويل: amount * (to_rate / from_rate)
     // مثلاً: 1 USD → SYP = 1 * (15000 / 1) = 15000
     const fromRate = rates[from];
     const toRate = rates[to];
-    
+
     if (!fromRate || !toRate || fromRate === 0) return null;
-    
+
     return (amount / fromRate) * toRate;
   }, [amount, from, to, rates, loading]);
 
@@ -139,9 +139,4 @@ export default function CurrencyCalculator() {
       </p>
     </div>
   );
-}'''
-
-with open('/mnt/agents/output/components/calculator/CurrencyCalculator.tsx', 'w') as f:
-    f.write(currencyCalc_code)
-
-print("✅ CurrencyCalculator.tsx saved!")
+}
