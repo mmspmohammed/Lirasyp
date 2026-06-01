@@ -92,7 +92,7 @@ function CurrencyRow({
             <p className="font-bold">{formatPrice(sellPrice, currency === "SYP" ? "SYP" : "USD")}</p>
           </div>
           <div className={`flex items-center gap-1 ${color}`}>
-            {icon}
+            
             <span className="text-sm font-medium">{formatChange(change)}</span>
           </div>
         </div>
