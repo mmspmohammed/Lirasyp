@@ -116,7 +116,7 @@ export default async function CurrencyPage() {
 
       <section>
         <h2 className="text-lg font-bold mb-4">العملات العالمية</h2>
-        {data.currencies.length > 0 ? (
+        {data.currencies && data.currencies.length > 0 ? (
           <div className="space-y-3">
             {data.currencies.map((c: any) => (
               <CurrencyRow key={c.target_currency} currency={c.target_currency} buyPrice={c.buy_price} sellPrice={c.sell_price} change={parseFloat(c.change_24h) || 0} />
