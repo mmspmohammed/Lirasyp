@@ -224,11 +224,12 @@ export default function RootLayout({
                   </div>
                 </div>
                 <div className="mt-8 border-t border-border pt-4 text-center text-sm text-muted-foreground">
-                  <p>© {new Date().getFullYear()} LiraSYP. جميع الحقوق محفوظة.</p>
-                  <p className="mt-1">
-                    ⚠️ الأسعار للأغراض الإعلامية فقط وقد تختلف عن السوق الفعلي.
-                  </p>
-                </div>
+  <p>الليرة عملتنا 2025-2026</p>
+  <p className="mt-1">created by E: Mohammed</p>
+  <p className="mt-2">
+    ⚠️ الأسعار للأغراض الإعلامية فقط وقد يكون هناك اختلاف عن السوق الفعلي.
+  </p>
+</div>
               </div>
             </footer>
           </div>
