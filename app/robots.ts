@@ -1,25 +1,34 @@
-import { MetadataRoute } from 'next';
-import { SITE_URL } from '@/lib/env';
+// app/robots.ts
+import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['/admin', '/api/', '/_next/', '/static/'],
+        userAgent: "*",
+        allow: "/",
+        disallow: [
+          "/api/",
+          "/_next/",
+          "/private/",
+        ],
       },
       {
-        userAgent: 'Googlebot',
-        allow: '/',
-        // ✅ إزالة crawlDelay: 0 - جوجل لا يحترم هذه القيمة
+        userAgent: "Googlebot",
+        allow: "/",
+        disallow: [
+          "/api/",
+        ],
       },
       {
-        userAgent: 'Googlebot-News',
-        allow: ['/news', '/prices'],
+        userAgent: "Bingbot",
+        allow: "/",
+        disallow: [
+          "/api/",
+        ],
       },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
+    sitemap: "https://lirasyp.sy/sitemap.xml",
+    host: "https://lirasyp.sy",
   };
 }
