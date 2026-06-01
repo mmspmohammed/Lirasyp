@@ -48,7 +48,7 @@ function GoldCard({
   return (
     <div className="rounded-2xl bg-card p-5 border border-border">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-2xl">{icon}</span>
+        <span className="text-2xl"></span>
         <h3 className="font-bold">{title}</h3>
       </div>
       <p className="text-3xl font-extrabold mb-2">{formatPrice(price, unit)}</p>
