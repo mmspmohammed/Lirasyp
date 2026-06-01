@@ -1,46 +1,41 @@
-import { MetadataRoute } from 'next';
-import { createClient } from '@supabase/supabase-js';
-import { SITE_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } from '@/lib/env';
-
-const supabaseBuild = createClient(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
-const STATIC_PAGES: MetadataRoute.Sitemap = [
-  { url: SITE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-  { url: `${SITE_URL}/prices/currency`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
-  { url: `${SITE_URL}/prices/gold`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
-  { url: `${SITE_URL}/prices/crypto`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
-  { url: `${SITE_URL}/prices/fuel`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
-  { url: `${SITE_URL}/prices/electricity`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
-  { url: `${SITE_URL}/news`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.85 },
-  { url: `${SITE_URL}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
-  { url: `${SITE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
-  { url: `${SITE_URL}/terms`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
-];
+// app/sitemap.ts
+import { MetadataRoute } from "next";
+import { createServerClient } from "@/lib/supabase-server";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  try {
-    const { data: articles, error } = await supabaseBuild
-      .from('news_articles')
-      .select('slug, published_at, updated_at')
-      .order('published_at', { ascending: false })
-      .limit(100);
+  const baseUrl = "https://lirasyp.sy";
 
-    if (error) {
-      console.error('Sitemap error:', error);
-      return STATIC_PAGES;
-    }
+  const supabase = createServerClient();
 
-    const newsEntries: MetadataRoute.Sitemap = (articles || []).map((a: any) => ({
-      url: `${SITE_URL}/news/${a.slug}`,
-      lastModified: new Date(a.updated_at || a.published_at),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    }));
+  // جلب الأخبار
+  const { data: news } = await supabase
+    .from("news_articles")
+    .select("slug, updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(100);
 
-    return [...STATIC_PAGES, ...newsEntries];
-    
-  } catch (err) {
-    console.error('Sitemap generation failed:', err);
-    return STATIC_PAGES;
-  }
+  // الصفحات الثابتة
+  const staticPages = [
+    { url: `${baseUrl}/`, priority: 1.0, changeFrequency: "hourly" as const },
+    { url: `${baseUrl}/prices/currency`, priority: 0.9, changeFrequency: "hourly" as const },
+    { url: `${baseUrl}/prices/gold`, priority: 0.9, changeFrequency: "hourly" as const },
+    { url: `${baseUrl}/prices/crypto`, priority: 0.9, changeFrequency: "hourly" as const },
+    { url: `${baseUrl}/prices/fuel`, priority: 0.8, changeFrequency: "daily" as const },
+    { url: `${baseUrl}/prices/electricity`, priority: 0.8, changeFrequency: "daily" as const },
+    { url: `${baseUrl}/news`, priority: 0.8, changeFrequency: "hourly" as const },
+    { url: `${baseUrl}/about`, priority: 0.5, changeFrequency: "monthly" as const },
+    { url: `${baseUrl}/privacy`, priority: 0.3, changeFrequency: "monthly" as const },
+    { url: `${baseUrl}/terms`, priority: 0.3, changeFrequency: "monthly" as const },
+  ];
+
+  // صفحات الأخبار الديناميكية
+  const newsPages =
+    news?.map((article: any) => ({
+      url: `${baseUrl}/news/${article.slug}`,
+      lastModified: new Date(article.updated_at),
+      priority: 0.7,
+      changeFrequency: "weekly" as const,
+    })) || [];
+
+  return [...staticPages, ...newsPages];
 }
