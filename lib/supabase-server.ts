@@ -1,11 +1,11 @@
-import { createServerSupabase } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 /**
  * ✅ عميل Supabase للخوادم (Server Components & Server Actions)
  * يستخدم cookies() من next/headers للتعامل مع الجلسة بأمان
  */
-export const createServerSupabase = () => {
+export const createServerClient= () => {
   const cookieStore = cookies();
   
   return createServerClient(
