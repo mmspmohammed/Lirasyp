@@ -54,7 +54,7 @@ function GoldCard({
       <p className="text-3xl font-extrabold mb-2">{formatPrice(price, unit)}</p>
       <div className={`flex items-center gap-1 text-sm ${changeColor}`}>
         {changeIcon}
-        <span>{formatChange(change)}</span>
+        <span>{{change > 0 ? "+" : ""}{change.toFixed(2)}%}</span>
         <span className="text-muted-foreground mr-1">24h</span>
       </div>
     </div>
