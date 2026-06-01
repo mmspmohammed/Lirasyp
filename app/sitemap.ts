@@ -1,7 +1,7 @@
 // app/sitemap.ts
 import { MetadataRoute } from "next";
-import { createServerClient } from "@/lib/supabase-server";
-
+import { createServerSupabase } from "@/lib/supabase-server";
+const supabase = createServerSupabase();
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://lirasyp.sy";
 
