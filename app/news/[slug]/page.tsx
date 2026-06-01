@@ -8,21 +8,24 @@ import { CATEGORY_META } from "@/lib/categories";
 import { ArrowLeft, Calendar, Tag, Share2, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 
-// ==================== Dynamic Metadata ====================
-
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Promise<Metadata> {
+}): Promise<<Metadata> {
   const supabase = createServerSupabase();
-  const { data: article } = await supabase
+  
+  // ✅ فك تشفير الـ slug
+  const slug = decodeURIComponent(params.slug);
+  
+  const { data: article, error } = await supabase
     .from("news_articles")
     .select("title_ar, summary, category, image_url, seo_keywords")
-    .eq("slug", params.slug)
-    .single();
+    .eq("slug", slug)
+    .limit(1)
+    .maybeSingle();
 
-  if (!article) {
+  if (!article || error) {
     return {
       title: "الخبر غير موجود",
     };
@@ -46,25 +49,26 @@ export async function generateMetadata({
       images: article.image_url ? [article.image_url] : undefined,
     },
     alternates: {
-      canonical: `https://lirasyp.sy/news/${params.slug}`,
+      canonical: `https://lirasyp.sy/news/${slug}`,
     },
   };
 }
 
-// ==================== Data Fetching ====================
-
 async function getArticle(slug: string) {
   const supabase = createServerSupabase();
 
-  const { data: article } = await supabase
+  const { data: article, error } = await supabase
     .from("news_articles")
     .select("*")
     .eq("slug", slug)
-    .single();
+    .limit(1)
+    .maybeSingle();
 
-  if (!article) return null;
+  if (error || !article) {
+    console.error("Error fetching article:", error);
+    return null;
+  }
 
-  // جلب مقالات ذات صلة
   const { data: related } = await supabase
     .from("news_articles")
     .select("title_ar, slug, summary, category, published_at")
@@ -76,14 +80,13 @@ async function getArticle(slug: string) {
   return { article, related: related || [] };
 }
 
-// ==================== Main Page ====================
-
 export default async function ArticlePage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const data = await getArticle(params.slug);
+  const slug = decodeURIComponent(params.slug);
+  const data = await getArticle(slug);
 
   if (!data) {
     notFound();
@@ -96,7 +99,6 @@ export default async function ArticlePage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
         <Link href="/" className="hover:text-primary transition">الرئيسية</Link>
         <ArrowLeft className="w-4 h-4" />
@@ -106,7 +108,6 @@ export default async function ArticlePage({
       </nav>
 
       <article className="max-w-3xl mx-auto">
-        {/* Category & Date */}
         <div className="flex items-center gap-3 mb-4">
           <span
             className="text-sm px-3 py-1 rounded-full font-medium"
@@ -120,12 +121,10 @@ export default async function ArticlePage({
           </span>
         </div>
 
-        {/* Title */}
         <h1 className="text-3xl md:text-4xl font-extrabold mb-6 leading-tight">
           {article.title_ar}
         </h1>
 
-        {/* Image */}
         {article.image_url && (
           <div className="rounded-2xl overflow-hidden mb-6">
             <img
@@ -137,7 +136,6 @@ export default async function ArticlePage({
           </div>
         )}
 
-        {/* Source */}
         <div className="flex items-center justify-between mb-6 p-4 rounded-xl bg-muted/50">
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-muted-foreground" />
@@ -158,13 +156,11 @@ export default async function ArticlePage({
           )}
         </div>
 
-        {/* Content */}
         <div
           className="prose prose-lg max-w-none dark:prose-invert mb-8"
           dangerouslySetInnerHTML={{ __html: cleanContent }}
         />
 
-        {/* Share */}
         <div className="flex items-center gap-3 mb-8 p-4 rounded-xl bg-muted/50">
           <Share2 className="w-5 h-5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">مشاركة:</span>
@@ -183,7 +179,6 @@ export default async function ArticlePage({
           </button>
         </div>
 
-        {/* Related Articles */}
         {related.length > 0 && (
           <section className="border-t border-border pt-8">
             <h2 className="text-xl font-bold mb-4">مقالات ذات صلة</h2>
@@ -211,7 +206,6 @@ export default async function ArticlePage({
         )}
       </article>
 
-      {/* Schema.org Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
