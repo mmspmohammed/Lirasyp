@@ -55,7 +55,7 @@ function CryptoCard({
             className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold text-white"
             style={{ backgroundColor: color }}
           >
-            {icon}
+            
           </span>
           <div>
             <h3 className="font-bold text-lg">{name}</h3>
