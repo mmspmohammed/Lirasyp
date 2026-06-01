@@ -40,17 +40,28 @@ export function useRates() {
 
         const mapped: Record<string, number> = {};
 
+        // ✅ USD هو العملة الأساسية = 1
+        mapped["USD"] = 1;
+
         // إضافة أسعار الصرف
+        // buy_price = 1/newRate (من API)
+        // يعني: buy_price = عدد USD لكل 1 unit من العملة
+        // مثال: EUR buy_price = 1.087 يعني 1 EUR = 1.087 USD
         exchangeData?.forEach((item: any) => {
-          const key = `${item.base_currency}_${item.target_currency}`;
-          mapped[key] = item.sell_price || item.buy_price;
-          mapped[item.target_currency] = item.sell_price || item.buy_price;
+          const rate = item.sell_price || item.buy_price;
+          if (rate && rate > 0) {
+            mapped[item.target_currency] = rate;
+          }
         });
 
         // إضافة أسعار الأصول
         assetData?.forEach((item: any) => {
-          mapped[item.asset_code] = item.price_usd;
-          mapped[`${item.asset_code}_SYP`] = item.price_syp;
+          if (item.price_usd) {
+            mapped[item.asset_code] = item.price_usd;
+          }
+          if (item.price_syp) {
+            mapped[`${item.asset_code}_SYP`] = item.price_syp;
+          }
         });
 
         setRates(mapped);
@@ -111,7 +122,7 @@ export function useRates() {
 export function useUsdSypRate() {
   const { rates, loading, error } = useRates();
   return {
-    rate: rates["SYP"] || rates["USD_SYP"] || null,
+    rate: rates["SYP"] || null,
     loading,
     error,
   };
