@@ -1,7 +1,7 @@
 // app/news/page.tsx
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
-const supabase = createServerSupabase();
+
 import { formatRelativeTime } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/categories";
 import { ArrowLeft, Newspaper, Calendar, Tag } from "lucide-react";
@@ -78,7 +78,7 @@ function NewsCard({
 // ==================== Data Fetching ====================
 
 async function getNewsData() {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
 
   const { data: news } = await supabase
     .from("news_articles")
