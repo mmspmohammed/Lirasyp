@@ -27,7 +27,7 @@ function PriceCard({ title, icon, price, change, unit, href, color }: {
       <div className="rounded-2xl bg-card p-5 border border-border transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{icon}</span>
+            <span className="text-2xl"></span>
             <h3 className="font-bold text-lg">{title}</h3>
           </div>
           <ArrowLeft className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -66,7 +66,7 @@ function NewsCard({ title, summary, category, date, slug }: {
 function SectionHeader({ title, href, icon }: { title: string; href: string; icon: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <div className="flex items-center gap-2">{icon}<h2 className="text-xl font-bold">{title}</h2></div>
+      <div className="flex items-center gap-2"><h2 className="text-xl font-bold">{title}</h2></div>
       <Link href={href} className="text-sm text-primary hover:underline flex items-center gap-1">عرض الكل<ArrowLeft className="w-4 h-4" /></Link>
     </div>
   );
@@ -173,7 +173,7 @@ export default async function HomePage() {
                         <td className="px-4 py-3 font-medium">{c.target_currency}</td>
                         <td className="px-4 py-3">{formatPrice(c.buy_price, "USD")}</td>
                         <td className={`px-4 py-3 ${color}`}>
-                          <span className="flex items-center gap-1">{formatChange(change)}</span>
+                          <span className="flex items-center gap-1">{change > 0 ? "+" : ""}{change.toFixed(2)}%</span>
                         </td>
                       </tr>
                     );
