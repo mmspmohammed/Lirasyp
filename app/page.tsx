@@ -1,283 +1,220 @@
-import { Suspense } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { createServerSupabase } from '@/lib/supabase-server';
-import { formatPrice, formatChange, formatRelativeTime } from '@/lib/format';
-import { SITE_NAME } from '@/lib/env';
+// app/page.tsx
+import { Suspense } from "react";
+import Link from "next/link";
+import { createServerClient } from "@/lib/supabase-server";
+import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
+import { TrendingUp, TrendingDown, Newspaper, DollarSign, Coins, Zap, Fuel, ArrowLeft, Bell } from "lucide-react";
 
-type NewsArticle = {
-  title_ar: string;
-  category: string;
-  published_at: string;
-  slug?: string | null;
+export const revalidate = 60;
+
+export const metadata = {
+  title: "الرئيسية",
+  description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية في سوريا.",
+  openGraph: {
+    title: "LiraSYP | أسعار الصرف والذهب في سوريا",
+    description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
+  },
 };
 
-function PriceCard({ title, icon, price, change, href }: {
-  title: string;
-  icon: string;
-  price: string;
-  change: { text: string; color: string };
-  href: string;
+function PriceCard({ title, icon, price, change, unit, href, color }: {
+  title: string; icon: React.ReactNode; price: string; change: string;
+  unit: string; href: string; color: string;
 }) {
+  const { icon: changeIcon, color: changeColor } = getChangeUI(parseFloat(change) || 0);
+  const isPositive = parseFloat(change) >= 0;
   return (
-    <Link href={href} className="block min-w-[160px] snap-start">
-      <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition shadow-sm">
+    <Link href={href} className="group block">
+      <div className="rounded-2xl bg-card p-5 border border-border transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-2xl" aria-hidden="true">{icon}</span>
-          <span className="text-xs text-muted-foreground">{title}</span>
-        </div>
-        
-        <div className="space-y-1">
-          <p className="text-xl font-bold tracking-tight">{price}</p>
-          <div className={`flex items-center gap-1 text-xs font-medium ${change.color}`}>
-            {change.text.includes('📈') ? <TrendingUp className="h-3 w-3" /> : 
-             change.text.includes('📉') ? <TrendingDown className="h-3 w-3" /> : 
-             <Minus className="h-3 w-3" />}
-            {change.text}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{icon}</span>
+            <h3 className="font-bold text-lg">{title}</h3>
           </div>
+          <ArrowLeft className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
-        
-        <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-          <span>التفاصيل</span>
-          <ArrowLeft className="h-3 w-3" />
+        <div className="flex items-baseline gap-2 mb-2">
+          <span className="text-3xl font-extrabold">{price}</span>
+          <span className="text-sm text-muted-foreground">{unit}</span>
+        </div>
+        <div className={`flex items-center gap-1 text-sm font-medium ${changeColor}`}>
+          {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          <span>{change}%</span>
+          <span className="text-muted-foreground mr-1">آخر 24 ساعة</span>
         </div>
       </div>
     </Link>
   );
 }
 
-function NewsCard({ title, category, time }: {
-  title: string;
-  category: string;
-  time: string;
+function NewsCard({ title, summary, category, date, slug }: {
+  title: string; summary: string; category: string; date: string; slug: string;
 }) {
-  const categoryColors: Record<string, string> = {
-    economy: 'bg-blue-500/10 text-blue-400',
-    fuel: 'bg-orange-500/10 text-orange-400',
-    electricity: 'bg-yellow-500/10 text-yellow-400',
-    crypto: 'bg-purple-500/10 text-purple-400',
-    gold: 'bg-amber-500/10 text-amber-400',
-  };
-
   return (
-    <article className="flex gap-3 p-3 rounded-lg hover:bg-muted/50 transition">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${categoryColors[category] || 'bg-muted text-muted-foreground'}`}>
-            {category === 'economy' ? 'اقتصادي' : 
-             category === 'fuel' ? 'محروقات' : 
-             category === 'electricity' ? 'كهرباء' : 
-             category === 'crypto' ? 'كريبتو' : 'ذهب'}
-          </span>
-          <span className="text-[10px] text-muted-foreground">{time}</span>
+    <Link href={`/news/${slug}`} className="group block">
+      <article className="rounded-xl bg-card p-4 border border-border transition-all hover:shadow-md hover:border-primary/20">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">{category}</span>
+          <span className="text-xs text-muted-foreground">{date}</span>
         </div>
-        <h3 className="text-sm font-medium line-clamp-2 leading-snug">{title}</h3>
-      </div>
-      <ArrowLeft className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
-    </article>
+        <h3 className="font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2">{title}</h3>
+        <p className="text-sm text-muted-foreground line-clamp-2">{summary}</p>
+      </article>
+    </Link>
   );
 }
 
-// ✅ جلب البيانات من الخادم - استخراج .data من الـ responses
-async function getMainData() {
-  const supabase = createServerSupabase();
-  
-  const [usdRes, goldRes, btcRes] = await Promise.all([
-    supabase.from('exchange_rates').select('sell_price, change_24h, fetched_at').eq('base_currency', 'USD').eq('target_currency', 'SYP').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, price_syp, change_24h, fetched_at').eq('asset_code', 'XAU').eq('is_latest', true).maybeSingle(),
-    supabase.from('asset_prices').select('price_usd, change_24h, fetched_at').eq('asset_code', 'BTC').eq('is_latest', true).maybeSingle(),
-  ]);
-
-  const { data: news } = await supabase
-    .from('news_articles')
-    .select('title_ar, category, published_at, slug')
-    .order('published_at', { ascending: false })
-    .limit(5);
-
-  return { 
-    usd: usdRes.data, 
-    gold: goldRes.data, 
-    btc: btcRes.data, 
-    news 
-  };
-}
-
-async function MainContent() {
-  const { usd, gold, btc, news } = await getMainData();
-  const lastUpdate = usd?.fetched_at || gold?.fetched_at || btc?.fetched_at;
-
+function SectionHeader({ title, href, icon }: { title: string; href: string; icon: React.ReactNode }) {
   return (
-    <div className="container mx-auto px-4 py-4 space-y-6">
-      
-      {lastUpdate && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
-          <span>🟢 محدث {formatRelativeTime(lastUpdate)}</span>
-          <span className="hidden sm:inline">البيانات من مصادر موثوقة</span>
-        </div>
-      )}
-
-      <section aria-labelledby="quick-prices">
-        <h2 id="quick-prices" className="sr-only">أسعار سريعة</h2>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-          
-          {usd ? (
-            <PriceCard
-              title="دولار / ليرة"
-              icon="💵"
-              price={formatPrice(usd.sell_price, 'SYP')}
-              change={formatChange(usd.change_24h || 0)}
-              href="/prices/currency"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {gold?.price_syp ? (
-            <PriceCard
-              title="ذهب عيار 21"
-              icon="🥇"
-              price={formatPrice((gold.price_syp / 31.1035) * 0.875, 'SYP')}
-              change={formatChange(gold.change_24h || 0)}
-              href="/prices/gold"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          {btc ? (
-            <PriceCard
-              title="بيتكوين"
-              icon="₿"
-              price={formatPrice(btc.price_usd, 'USD')}
-              change={formatChange(btc.change_24h || 0)}
-              href="/prices/crypto"
-            />
-          ) : (
-            <div className="min-w-[160px] snap-start bg-card rounded-xl p-4 border border-muted animate-pulse">
-              <div className="h-4 bg-muted rounded w-16 mb-3" />
-              <div className="h-6 bg-muted rounded w-20 mb-2" />
-              <div className="h-3 bg-muted rounded w-12" />
-            </div>
-          )}
-
-          <Link href="/prices/fuel" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">🛢️</span>
-                <span className="text-xs text-muted-foreground">محروقات</span>
-              </div>
-              <p className="text-sm text-muted-foreground">أسعار يدوية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-          <Link href="/prices/electricity" className="block min-w-[160px] snap-start">
-            <div className="bg-card rounded-xl p-4 border border-muted hover:border-primary/50 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">⚡</span>
-                <span className="text-xs text-muted-foreground">كهرباء</span>
-              </div>
-              <p className="text-sm text-muted-foreground">تعرفة رسمية</p>
-              <div className="mt-3 pt-3 border-t border-muted flex items-center justify-between text-xs text-muted-foreground">
-                <span>التفاصيل</span>
-                <ArrowLeft className="h-3 w-3" />
-              </div>
-            </div>
-          </Link>
-
-        </div>
-      </section>
-
-      <section aria-labelledby="latest-news">
-        <div className="flex items-center justify-between mb-3">
-          <h2 id="latest-news" className="font-bold text-lg">آخر الأخبار</h2>
-          <Link href="/news" className="text-xs text-primary hover:underline">عرض الكل</Link>
-        </div>
-        
-        <div className="bg-card rounded-xl border border-muted divide-y divide-muted">
-          {news?.map((article: NewsArticle) => (
-            <Link 
-              key={article.slug || article.title_ar}
-              href={`/news/${article.slug || 'news'}`}
-            >
-              <NewsCard
-                title={article.title_ar}
-                category={article.category}
-                time={formatRelativeTime(article.published_at)}
-              />
-            </Link>
-          )) || (
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="p-3 flex gap-3 animate-pulse">
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-muted rounded w-20" />
-                  <div className="h-4 bg-muted rounded w-full" />
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                </div>
-                <div className="h-4 w-4 bg-muted rounded mt-1" />
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground text-center leading-relaxed">
-        الأسعار المعروضة استرشادية وغير ملزمة قانونياً. 
-        نعمل على تحديث البيانات كل 5 دقائق من مصادر موثوقة.
-      </div>
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">{icon}<h2 className="text-xl font-bold">{title}</h2></div>
+      <Link href={href} className="text-sm text-primary hover:underline flex items-center gap-1">عرض الكل<ArrowLeft className="w-4 h-4" /></Link>
     </div>
   );
 }
 
-export default function Home() {
+async function getHomeData() {
+  const supabase = createServerClient();
+  const { data: usdSyp } = await supabase
+    .from("exchange_rates")
+    .select("buy_price, sell_price, change_24h")
+    .eq("base_currency", "USD").eq("target_currency", "SYP").eq("is_latest", true)
+    .order("fetched_at", { ascending: false }).limit(1).single();
+  const { data: gold } = await supabase
+    .from("asset_prices")
+    .select("price_usd, change_24h")
+    .eq("asset_type", "gold_ounce").eq("asset_code", "XAU").eq("is_latest", true)
+    .order("fetched_at", { ascending: false }).limit(1).single();
+  const { data: btc } = await supabase
+    .from("asset_prices")
+    .select("price_usd, change_24h")
+    .eq("asset_type", "crypto").eq("asset_code", "BTC").eq("is_latest", true)
+    .order("fetched_at", { ascending: false }).limit(1).single();
+  const { data: currencies } = await supabase
+    .from("exchange_rates")
+    .select("target_currency, buy_price, change_24h")
+    .eq("base_currency", "USD").neq("target_currency", "SYP").eq("is_latest", true)
+    .order("fetched_at", { ascending: false }).limit(6);
+  const { data: news } = await supabase
+    .from("news_articles")
+    .select("title_ar, slug, summary, category, published_at")
+    .order("published_at", { ascending: false }).limit(4);
+  return { usdSyp, gold, btc, currencies: currencies || [], news: news || [] };
+}
+
+export default async function HomePage() {
+  const data = await getHomeData();
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: 'الرئيسية | ' + SITE_NAME,
-            description: 'أسعار الدولار، الذهب، والمحروقات في سوريا بشكل لحظي',
-            publisher: { '@type': 'Organization', name: SITE_NAME },
-          }),
-        }}
-      />
-      
-      <Suspense fallback={
-        <div className="container mx-auto px-4 py-8 space-y-6">
-          <div className="h-8 bg-muted rounded w-48 animate-pulse" />
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="min-w-[160px] bg-card rounded-xl p-4 border border-muted animate-pulse">
-                <div className="h-4 bg-muted rounded w-16 mb-3" />
-                <div className="h-6 bg-muted rounded w-20 mb-2" />
-                <div className="h-3 bg-muted rounded w-12" />
-              </div>
-            ))}
-          </div>
-          <div className="space-y-3">
-            <div className="h-5 bg-muted rounded w-32 animate-pulse" />
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-card rounded-lg border border-muted animate-pulse" />
-            ))}
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      {/* Hero */}
+      <section className="mb-12 text-center">
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          تتبع لحظي للأسعار في سوريا
+        </h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          أسعار الدولار والليرة السورية والذهب والعملات الرقمية محدثة لحظياً من مصادر موثوقة مع إشعارات فورية عند التغيرات المهمة.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3 mt-6">
+          <Link href="/prices/currency" className="px-6 py-3 rounded-full bg-primary text-white font-medium hover:bg-primary/90 transition">💵 أسعار العملات</Link>
+          <Link href="/prices/gold" className="px-6 py-3 rounded-full bg-card border border-border font-medium hover:border-primary transition">🥇 أسعار الذهب</Link>
+          <Link href="/prices/crypto" className="px-6 py-3 rounded-full bg-card border border-border font-medium hover:border-primary transition">₿ العملات الرقمية</Link>
         </div>
-      }>
-        <MainContent />
-      </Suspense>
-    </>
+      </section>
+
+      {/* Price Cards */}
+      <section className="mb-8">
+        <SectionHeader title="أهم الأسعار" href="/prices" icon={<DollarSign className="w-6 h-6 text-primary" />} />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <PriceCard title="الدولار / ليرة" icon="💵" price={data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—"} change={data.usdSyp?.change_24h?.toString() || "0"} unit="ل.س" href="/prices/currency" color="primary" />
+          <PriceCard title="الذهب (أونصة)" icon="🥇" price={data.gold ? formatPrice(data.gold.price_usd, "USD") : "—"} change={data.gold?.change_24h?.toString() || "0"} unit="دولار" href="/prices/gold" color="yellow" />
+          <PriceCard title="البيتكوين" icon="₿" price={data.btc ? formatPrice(data.btc.price_usd, "USD") : "—"} change={data.btc?.change_24h?.toString() || "0"} unit="دولار" href="/prices/crypto" color="orange" />
+        </div>
+      </section>
+
+      {/* ✅ بانر التنبيهات - بين الكروت والأخبار */}
+      <section className="mb-10">
+        <div className="rounded-2xl bg-gradient-to-r from-red-500/10 via-orange-500/10 to-yellow-500/10 border border-red-500/20 p-5 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+              <Bell className="w-6 h-6 text-red-500" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base">🔔 تفعيل التنبيهات</h3>
+              <p className="text-sm text-muted-foreground">
+                احصل على إشعارات فورية عند تغير أسعار الدولار، الذهب، والعملات الرقمية.
+              </p>
+            </div>
+          </div>
+          <button className="px-5 py-2.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition shadow-lg shadow-red-500/20 shrink-0">
+            تفعيل الإشعارات
+          </button>
+        </div>
+      </section>
+
+      {/* Currencies Table */}
+      {data.currencies.length > 0 && (
+        <section className="mb-12">
+          <SectionHeader title="العملات العالمية" href="/prices/currency" icon={<Coins className="w-6 h-6 text-primary" />} />
+          <div className="rounded-2xl bg-card border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-right text-sm font-medium">العملة</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium">السعر (USD)</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium">التغير 24h</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {data.currencies.map((c: any) => {
+                    const change = parseFloat(c.change_24h) || 0;
+                    const { color, icon } = getChangeUI(change);
+                    return (
+                      <tr key={c.target_currency} className="hover:bg-muted/30 transition">
+                        <td className="px-4 py-3 font-medium">{c.target_currency}</td>
+                        <td className="px-4 py-3">{formatPrice(c.buy_price, "USD")}</td>
+                        <td className={`px-4 py-3 ${color}`}>
+                          <span className="flex items-center gap-1">{icon}{formatChange(change)}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* News Section */}
+      {data.news.length > 0 && (
+        <section className="mb-12">
+          <SectionHeader title="آخر الأخبار الاقتصادية" href="/news" icon={<Newspaper className="w-6 h-6 text-primary" />} />
+          <div className="grid gap-4 md:grid-cols-2">
+            {data.news.map((article: any) => (
+              <NewsCard key={article.slug} title={article.title_ar} summary={article.summary} category={article.category} date={new Date(article.published_at).toLocaleDateString("ar-SY")} slug={article.slug} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Quick Links */}
+      <section>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Zap className="w-6 h-6 text-primary" />تصفح سريع</h2>
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+          {[
+            { href: "/prices/fuel", icon: "⛽", title: "المحروقات", desc: "بنزين ومازوت وغاز" },
+            { href: "/prices/electricity", icon: "⚡", title: "الكهرباء", desc: "شرائح الاستهلاك" },
+            { href: "/news", icon: "📰", title: "الأخبار", desc: "اقتصادية وسورية" },
+            { href: "/about", icon: "ℹ️", title: "عن الموقع", desc: "من نحن" },
+          ].map((link) => (
+            <Link key={link.href} href={link.href} className="rounded-xl bg-card p-4 border border-border text-center hover:border-primary/30 hover:shadow-md transition">
+              <span className="text-3xl block mb-2">{link.icon}</span>
+              <h3 className="font-bold">{link.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{link.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
