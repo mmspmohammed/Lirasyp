@@ -1,7 +1,8 @@
 // app/page.tsx
 import { Suspense } from "react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
+const supabase = createServerSupabase();
 import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
 import { TrendingUp, TrendingDown, Newspaper, DollarSign, Coins, Zap, Fuel, ArrowLeft, Bell } from "lucide-react";
 
