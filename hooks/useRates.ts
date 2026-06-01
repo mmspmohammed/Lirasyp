@@ -1,4 +1,4 @@
-useRates_code = '''// hooks/useRates.ts
+// hooks/useRates.ts
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,43 +16,43 @@ export function useRates() {
 
   useEffect(() => {
     const supabase = createBrowserClient();
-    
+
     async function fetchRates() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // جلب أسعار الصرف (USD → العملات)
         const { data: exchangeData, error: exchangeErr } = await supabase
           .from("exchange_rates")
           .select("base_currency, target_currency, buy_price, sell_price")
           .eq("is_latest", true);
-        
+
         if (exchangeErr) throw exchangeErr;
-        
+
         // جلب أسعار الأصول (ذهب + كريبتو)
         const { data: assetData, error: assetErr } = await supabase
           .from("asset_prices")
           .select("asset_code, asset_type, price_usd, price_syp")
           .eq("is_latest", true);
-        
+
         if (assetErr) throw assetErr;
-        
+
         const mapped: Record<string, number> = {};
-        
+
         // إضافة أسعار الصرف
         exchangeData?.forEach((item: any) => {
           const key = `${item.base_currency}_${item.target_currency}`;
           mapped[key] = item.sell_price || item.buy_price;
           mapped[item.target_currency] = item.sell_price || item.buy_price;
         });
-        
+
         // إضافة أسعار الأصول
         assetData?.forEach((item: any) => {
           mapped[item.asset_code] = item.price_usd;
           mapped[`${item.asset_code}_SYP`] = item.price_syp;
         });
-        
+
         setRates(mapped);
       } catch (err: any) {
         console.error("Error fetching rates:", err);
@@ -61,9 +61,9 @@ export function useRates() {
         setLoading(false);
       }
     }
-    
+
     fetchRates();
-    
+
     // Realtime subscription لـ exchange_rates
     const channel = supabase
       .channel("exchange-rates-changes")
@@ -80,7 +80,7 @@ export function useRates() {
         }
       )
       .subscribe();
-    
+
     // Realtime subscription لـ asset_prices
     const channel2 = supabase
       .channel("asset-prices-changes")
@@ -144,9 +144,4 @@ export function useGoldRate() {
     loading,
     error,
   };
-}'''
-
-with open('/mnt/agents/output/hooks/useRates.ts', 'w') as f:
-    f.write(useRates_code)
-
-print("✅ hooks/useRates.ts saved!")
+}
