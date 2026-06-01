@@ -1,7 +1,7 @@
 // app/prices/crypto/page.tsx
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
-const supabase = createServerSupabase();
+
 import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
 import { ArrowLeft, TrendingUp, TrendingDown, Bitcoin } from "lucide-react";
 import type { Metadata } from "next";
@@ -79,7 +79,7 @@ function CryptoCard({
 // ==================== Data Fetching ====================
 
 async function getCryptoData() {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
 
   const { data: cryptos } = await supabase
     .from("asset_prices")
