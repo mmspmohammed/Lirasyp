@@ -22,7 +22,7 @@ export default function Header() {
       <header className="sticky top-0 z-40 w-full bg-card/95 backdrop-blur border-b border-muted">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xl" aria-hidden="true">🇸🇾</span>
+            <span className="text-xl" aria-hidden="true"></span>
             <h1 className="font-bold text-lg tracking-tight">الليرة عملتنا</h1>
           </div>
           <div className="flex items-center gap-2">
