@@ -8,7 +8,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
 }
-
+ 
 export default function CalculatorModal({ open, onClose }: Props) {
   // ✅ إغلاق بـ Escape
   const handleKeyDown = useCallback(
