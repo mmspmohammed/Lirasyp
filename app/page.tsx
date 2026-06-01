@@ -167,7 +167,7 @@ export default async function HomePage() {
                 <tbody className="divide-y divide-border">
                   {data.currencies.map((c: any) => {
                     const change = parseFloat(c.change_24h) || 0;
-                    const { color, icon } = getChangeUI(change);
+                    const { color } = getChangeUI(change);
                     return (
                       <tr key={c.target_currency} className="hover:bg-muted/30 transition">
                         <td className="px-4 py-3 font-medium">{c.target_currency}</td>
