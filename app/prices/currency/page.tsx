@@ -2,7 +2,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
-
 import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, RefreshCw } from "lucide-react";
 import type { Metadata } from "next";
@@ -43,7 +42,7 @@ function CurrencyRow({
   change: number;
   isMain?: boolean;
 }) {
-  const { icon, color } = getChangeUI(change);
+  const { color } = getChangeUI(change);
 
   return (
     <div
