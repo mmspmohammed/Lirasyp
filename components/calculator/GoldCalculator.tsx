@@ -18,7 +18,7 @@ const OUNCE_TO_GRAM = 31.1035;
 export default function GoldCalculator() {
   const { ounceUsd, loading, error } = useGoldRate();
   const [grams, setGrams] = useState<number>(1);
-  const [selectedKarats,setselectedKarats] = useState<string[]>([“21 قيراط“]);
+  const [selectedKarats, setSelectedKarats] = useState<string[]>(["21 قيراط"]);
 
   const results = useMemo(() => {
     if (!ounceUsd || ounceUsd <= 0) return [];
