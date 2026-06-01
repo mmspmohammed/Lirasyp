@@ -10,14 +10,15 @@ const KARATS = [
   { name: "22 قيراط", purity: 0.916, color: "#E5C100" },
   { name: "21 قيراط", purity: 0.875, color: "#D4AF37" },
   { name: "18 قيراط", purity: 0.75, color: "#C5A028" },
+  { name: "14 قيراط", purity: 0.5833, color: "#C5A028" },
 ];
 
 const OUNCE_TO_GRAM = 31.1035;
 
 export default function GoldCalculator() {
   const { ounceUsd, loading, error } = useGoldRate();
-  const [grams, setGrams] = useState<number>(1);
-  const [selectedKarats, setSelectedKarats] = useState<string[]>(KARATS.map((k) => k.name));
+  const [grams, setGrams] = useState<number>();
+  const [selectedKarats] = useState<string[]>(KARATS.map((k) => k.name));
 
   const results = useMemo(() => {
     if (!ounceUsd || ounceUsd <= 0) return [];
