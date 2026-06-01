@@ -15,7 +15,7 @@ interface CardData {
 }
 
 export default function PriceCardsCarousel({ cards }: { cards: CardData[] }) {
-  const scrollRef = useRef<<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
