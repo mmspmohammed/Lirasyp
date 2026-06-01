@@ -8,27 +8,61 @@ import { CATEGORY_META } from "@/lib/categories";
 import { ArrowLeft, Calendar, Tag, Share2, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 
+// ✅ دالة آمنة لفك تشفير الـ slug
+function safeDecodeSlug(raw: string): string {
+  if (!raw) return "";
+  try {
+    // جرب فك التشفير
+    let decoded = decodeURIComponent(raw);
+    // إذا كان فيه % بعد أول فك، جرب مرة تانية
+    if (decoded.includes("%")) {
+      try {
+        decoded = decodeURIComponent(decoded);
+      } catch {
+        // تجاهل
+      }
+    }
+    return decoded;
+  } catch {
+    // إذا فشل فك التشفير، رجّع كما هو
+    return raw;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Promise<Metadata> {
+}): Promise<<Metadata> {
   try {
     const supabase = createServerSupabase();
-    const slug = decodeURIComponent(params.slug || "");
+    const slug = safeDecodeSlug(params.slug || "");
 
     if (!slug) return { title: "الخبر غير موجود" };
 
-    const { data: article } = await supabase
+    // ✅ جرب البحث بالـ slug كما هو، وإذا ما لقى، جرب التشفير/فك التشفير
+    let { data: article } = await supabase
       .from("news_articles")
       .select("title_ar, summary, category, image_url, seo_keywords")
       .eq("slug", slug)
       .limit(1)
       .maybeSingle();
 
+    // إذا ما لقى، جرب encodeURIComponent
+    if (!article) {
+      const encoded = encodeURIComponent(slug);
+      const res = await supabase
+        .from("news_articles")
+        .select("title_ar, summary, category, image_url, seo_keywords")
+        .eq("slug", encoded)
+        .limit(1)
+        .maybeSingle();
+      article = res.data;
+    }
+
     if (!article) return { title: "الخبر غير موجود" };
 
-    const meta = CATEGORY_META[article.category as keyof typeof CATEGORY_META] || CATEGORY_META.economy;
+    const meta = CATEGORY_META[(article.category as keyof typeof CATEGORY_META) || "economy"] || CATEGORY_META.economy;
 
     return {
       title: article.title_ar || "خبر",
@@ -45,29 +79,44 @@ export async function generateMetadata({
   }
 }
 
-async function getArticle(slug: string) {
+async function getArticle(rawSlug: string) {
   try {
     const supabase = createServerSupabase();
+    const slug = safeDecodeSlug(rawSlug);
 
-    const { data: article, error } = await supabase
+    if (!slug) return null;
+
+    // ✅ جرب البحث بالـ slug كما هو
+    let { data: article, error } = await supabase
       .from("news_articles")
       .select("*")
       .eq("slug", slug)
       .limit(1)
       .maybeSingle();
 
-    if (error) {
-      console.error("Supabase error:", error);
-      return null;
+    // إذا ما لقى، جرب encodeURIComponent
+    if (!article && !error) {
+      const encoded = encodeURIComponent(slug);
+      const res = await supabase
+        .from("news_articles")
+        .select("*")
+        .eq("slug", encoded)
+        .limit(1)
+        .maybeSingle();
+      article = res.data;
+      error = res.error;
     }
 
-    if (!article) return null;
+    if (error || !article) {
+      console.error("Article not found for slug:", slug);
+      return null;
+    }
 
     const { data: related } = await supabase
       .from("news_articles")
       .select("title_ar, slug, summary, category, published_at")
       .eq("category", article.category || "economy")
-      .neq("slug", slug)
+      .neq("slug", article.slug)
       .order("published_at", { ascending: false })
       .limit(3);
 
@@ -83,13 +132,7 @@ export default async function ArticlePage({
 }: {
   params: { slug: string };
 }) {
-  const slug = decodeURIComponent(params.slug || "");
-
-  if (!slug) {
-    notFound();
-  }
-
-  const data = await getArticle(slug);
+  const data = await getArticle(params.slug || "");
 
   if (!data) {
     notFound();
@@ -97,12 +140,13 @@ export default async function ArticlePage({
 
   const { article, related } = data;
 
-  // ✅ دفاعي: إذا أي حقل ناقص، ما بيوقف الصفحة
+  // ✅ دفاعي: كل الحقول مع fallback
   const meta = CATEGORY_META[(article.category as keyof typeof CATEGORY_META) || "economy"] || CATEGORY_META.economy;
   const cleanContent = sanitizeHTML(article.content || article.summary || "");
   const title = article.title_ar || "خبر";
   const source = article.source_name || "غير معروف";
   const published = article.published_at || new Date().toISOString();
+  const slug = article.slug || params.slug || "";
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -176,7 +220,7 @@ export default async function ArticlePage({
               if (typeof navigator !== "undefined" && navigator.share) {
                 navigator.share({
                   title: title,
-                  url: `https://lirasyp.sy/news/${article.slug || slug}`,
+                  url: `https://lirasyp.sy/news/${slug}`,
                 });
               }
             }}
