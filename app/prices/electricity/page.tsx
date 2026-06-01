@@ -133,28 +133,7 @@ export default async function ElectricityPage() {
         </div>
       )}
 
-      {/* Example Calculation */}
-      <section className="rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 p-6 mb-8">
-        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Calculator className="w-5 h-5" />
-          مثال حسابي
-        </h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">استهلاك شهري</p>
-            <p className="text-3xl font-extrabold">{exampleConsumption} كيلوواط</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">التكلفة التقديرية</p>
-            <p className="text-3xl font-extrabold text-primary">
-              {formatPrice(exampleCost, "SYP")}
-            </p>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mt-4">
-          ⚠️ هاد تقدير تقريبي. الفاتورة الفعلية قد تختلف حسب المنطقة والاستهلاك الفعلي.
-        </p>
-      </section>
+      
 
       {/* Info */}
       <div className="rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
