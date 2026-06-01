@@ -1,99 +1,54 @@
 // app/layout.tsx
-
-import "./globals.css";
-
 import type { Metadata, Viewport } from "next";
 import { Tajawal } from "next/font/google";
+import "./globals.css";
 
-import Header from "@/components/Header";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import FloatingCalculator from "@/components/calculator/FloatingCalculator";
-
-import { SITE_NAME, SITE_URL } from "@/lib/env";
+import Header from "@/components/Header";
+import FloatingActions from "@/components/FloatingActions";
 
 const tajawal = Tajawal({
   subsets: ["arabic"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "700", "800"],
   variable: "--font-tajawal",
   display: "swap",
-  preload: true,
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-
-  title: {
-    default:
-      "الليرة عملتنا | أسعار الدولار، الذهب، والمحروقات في سوريا",
-    template: `%s | الليرة عملتنا`,
-  },
-
-  description:
-    "موقع الليرة عملتنا يعرض أسعار الدولار مقابل الليرة السورية، الذهب، المحروقات، الكهرباء، والعملات الرقمية بشكل لحظي وموثوق. تحديث كل دقيقة.",
-
-  keywords: [
-    "سعر الدولار في سوريا",
-    "الليرة السورية",
-    "سعر الذهب سوريا",
-    "أسعار المحروقات",
-    "تعرفة الكهرباء",
-    "عملات رقمية سوريا",
-    "اقتصاد سوريا",
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
+};
 
-  authors: [{ name: "فريق الليرة عملتنا" }],
-
-  creator: "LiraSYP Team",
-  publisher: "LiraSYP.sy",
-
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
+export const metadata: Metadata = {
+  metadataBase: new URL("https://lirasyp.sy"),
+  title: {
+    default: "LiraSYP | أسعار الصرف والذهب في سوريا",
+    template: "%s | LiraSYP",
   },
-
-  openGraph: {
-    type: "website",
-    locale: "ar_SY",
-    url: SITE_URL,
-    siteName: SITE_NAME,
-
-    title:
-      "الليرة عملتنا - أسعار اقتصادية لحظية في سوريا",
-
-    description:
-      "تابع أسعار الدولار، الذهب، والمحروقات في سوريا بشكل لحظي وموثوق.",
-
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: SITE_NAME,
-      },
-    ],
-  },
-
-  twitter: {
-    card: "summary_large_image",
-
-    title:
-      "الليرة عملتنا | أسعار اقتصادية سوريا",
-
-    description:
-      "أسعار الدولار، الذهب، والعملات في سوريا - تحديث لحظي",
-
-    images: ["/og-image.png"],
-  },
-
-  alternates: {
-    canonical: "/",
-  },
-
+  description:
+    "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية. مصادر موثوقة، تحديث فوري، إشعارات ذكية.",
+  keywords: [
+    "ليرة سورية",
+    "دولار",
+    "سعر الصرف",
+    "ذهب",
+    "عملات رقمية",
+    "بيتكوين",
+    "سوريا",
+    "أسعار",
+    "محروقات",
+    "كهرباء",
+  ],
+  authors: [{ name: "LiraSYP" }],
+  creator: "LiraSYP",
+  publisher: "LiraSYP",
   robots: {
     index: true,
     follow: true,
-
     googleBot: {
       index: true,
       follow: true,
@@ -102,49 +57,38 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-};
-
-export const viewport: Viewport = {
-  themeColor: [
-    {
-      media: "(prefers-color-scheme: dark)",
-      color: "#0B1120",
-    },
-    {
-      media: "(prefers-color-scheme: light)",
-      color: "#F8FAFC",
-    },
-  ],
-
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-};
-
-const jsonLd = {
-  "@context": "https://schema.org",
-
-  "@type": "WebSite",
-
-  name: SITE_NAME,
-
-  url: SITE_URL,
-
-  description:
-    "موقع اقتصادي يعرض أسعار الصرف، الذهب، والمحروقات في سوريا",
-
-  inLanguage: "ar-SY",
-
-  publisher: {
-    "@type": "Organization",
-
-    name: SITE_NAME,
-
-    logo: {
-      "@type": "ImageObject",
-      url: `${SITE_URL}/logo.png`,
-    },
+  openGraph: {
+    type: "website",
+    locale: "ar_SY",
+    url: "https://lirasyp.sy",
+    siteName: "LiraSYP",
+    title: "LiraSYP | أسعار الصرف والذهب في سوريا",
+    description:
+      "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "LiraSYP - أسعار الصرف والذهب في سوريا",
+      },
+    ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "LiraSYP | أسعار الصرف والذهب في سوريا",
+    description:
+      "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
+    images: ["/og-image.png"],
+    creator: "@lirasyp",
+  },
+  alternates: {
+    canonical: "https://lirasyp.sy",
+  },
+  verification: {
+    google: "your-google-verification-code",
+  },
+  category: "finance",
 };
 
 export default function RootLayout({
@@ -153,61 +97,142 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="ar"
-      dir="rtl"
-      suppressHydrationWarning
-    >
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
+        {/* Structured Data - WebSite */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(jsonLd),
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "LiraSYP",
+              url: "https://lirasyp.sy",
+              description:
+                "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
+              inLanguage: "ar",
+              publisher: {
+                "@type": "Organization",
+                name: "LiraSYP",
+                logo: {
+                  "@type": "ImageObject",
+                  url: "https://lirasyp.sy/logo.png",
+                },
+              },
+              potentialAction: {
+                "@type": "SearchAction",
+                target: {
+                  "@type": "EntryPoint",
+                  urlTemplate: "https://lirasyp.sy/search?q={search_term_string}",
+                },
+                "query-input": "required name=search_term_string",
+              },
+            }),
           }}
         />
 
-        <link
-          rel="preconnect"
-          href="https://awvlqxxwktqtlobhvqwh.supabase.co"
+        {/* Structured Data - Organization */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "LiraSYP",
+              url: "https://lirasyp.sy",
+              logo: "https://lirasyp.sy/logo.png",
+              sameAs: [
+                "https://twitter.com/lirasyp",
+                "https://facebook.com/lirasyp",
+              ],
+              contactPoint: {
+                "@type": "ContactPoint",
+                email: "contact@lirasyp.sy",
+                contactType: "customer service",
+                availableLanguage: ["Arabic"],
+              },
+            }),
+          }}
         />
+
+        {/* Preconnect to external domains */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://awvlqxxwktqtlobhvqwh.supabase.co" />
       </head>
-
       <body
-        className={`${tajawal.variable} font-sans`}
+        className={`${tajawal.variable} font-sans bg-background text-foreground antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Header />
-
-          <main className="min-h-screen mb-20">
-            {children}
-          </main>
-
-          <FloatingCalculator />
-
-          <footer
-            className="
-              sticky
-              bottom-0
-              z-40
-              w-full
-              border-t
-              border-muted
-              bg-card/95
-              p-3
-              text-center
-              text-xs
-              text-muted-foreground
-              backdrop-blur
-            "
-          >
-            © {new Date().getFullYear()}{" "}
-            {SITE_NAME} • الأسعار استرشادية
-          </footer>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <footer className="border-t border-border bg-card py-8">
+              <div className="container mx-auto px-4">
+                <div className="grid gap-8 md:grid-cols-3">
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold">LiraSYP</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      منصة متخصصة في تتبع أسعار الصرف والذهب والعملات الرقمية في سوريا.
+                      نقدم بيانات دقيقة ومحدثة من مصادر موثوقة.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold">روابط سريعة</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <a href="/prices/currency" className="text-muted-foreground hover:text-primary transition">
+                          💵 أسعار العملات
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/prices/gold" className="text-muted-foreground hover:text-primary transition">
+                          🥇 أسعار الذهب
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/prices/crypto" className="text-muted-foreground hover:text-primary transition">
+                          ₿ العملات الرقمية
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/news" className="text-muted-foreground hover:text-primary transition">
+                          📰 الأخبار الاقتصادية
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold">معلومات</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <a href="/about" className="text-muted-foreground hover:text-primary transition">
+                          عن الموقع
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/privacy" className="text-muted-foreground hover:text-primary transition">
+                          سياسة الخصوصية
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/terms" className="text-muted-foreground hover:text-primary transition">
+                          شروط الاستخدام
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-8 border-t border-border pt-4 text-center text-sm text-muted-foreground">
+                  <p>© {new Date().getFullYear()} LiraSYP. جميع الحقوق محفوظة.</p>
+                  <p className="mt-1">
+                    ⚠️ الأسعار للأغراض الإعلامية فقط وقد تختلف عن السوق الفعلي.
+                  </p>
+                </div>
+              </div>
+            </footer>
+          </div>
+          <FloatingActions />
         </ThemeProvider>
       </body>
     </html>
