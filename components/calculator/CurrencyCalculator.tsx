@@ -26,8 +26,6 @@ export default function CurrencyCalculator() {
   const result = useMemo(() => {
     if (loading || !rates[from] || !rates[to]) return null;
 
-    // التحويل: amount * (to_rate / from_rate)
-    // مثلاً: 1 USD → SYP = 1 * (15000 / 1) = 15000
     const fromRate = rates[from];
     const toRate = rates[to];
 
@@ -38,6 +36,9 @@ export default function CurrencyCalculator() {
 
   const fromCurrency = CURRENCIES.find((c) => c.code === from);
   const toCurrency = CURRENCIES.find((c) => c.code === to);
+
+  // عدد العملات المتاحة
+  const availableCount = CURRENCIES.filter(c => rates[c.code]).length;
 
   if (loading) {
     return (
@@ -63,6 +64,14 @@ export default function CurrencyCalculator() {
 
   return (
     <div className="space-y-4">
+      {/* عدد العملات المتاحة */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>💱 العملات المتاحة: {availableCount} / {CURRENCIES.length}</span>
+        {availableCount < CURRENCIES.length && (
+          <span className="text-yellow-500">جاري تحديث الباقي...</span>
+        )}
+      </div>
+
       <div>
         <label className="block text-sm font-medium mb-2">المبلغ</label>
         <input
@@ -84,8 +93,12 @@ export default function CurrencyCalculator() {
             className="w-full rounded-xl border border-border bg-background p-3 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.flag} {c.name}
+              <option 
+                key={c.code} 
+                value={c.code}
+                disabled={!rates[c.code]}
+              >
+                {c.flag} {c.name} {!rates[c.code] ? "(قريباً)" : ""}
               </option>
             ))}
           </select>
@@ -99,8 +112,12 @@ export default function CurrencyCalculator() {
             className="w-full rounded-xl border border-border bg-background p-3 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.flag} {c.name}
+              <option 
+                key={c.code} 
+                value={c.code}
+                disabled={!rates[c.code]}
+              >
+                {c.flag} {c.name} {!rates[c.code] ? "(قريباً)" : ""}
               </option>
             ))}
           </select>
