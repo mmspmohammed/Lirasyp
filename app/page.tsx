@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { formatPrice, getChangeUI } from "@/lib/format";
-import { TrendingUp, TrendingDown, Newspaper, Coins, Zap, ArrowLeft, Bell } from "lucide-react";
+import { TrendingUp, TrendingDown, Newspaper, Zap, ArrowLeft, Bell } from "lucide-react";
 import PriceCardsCarousel from "@/components/PriceCardsCarousel";
 
 export const revalidate = 60;
