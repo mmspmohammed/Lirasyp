@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from "react";
 import { useGoldRate } from "@/hooks/useRates";
-import { formatPrice, calculateGoldGrams } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 
 const KARATS = [
   { name: "24 قيراط", purity: 1.0, color: "#FFD700" },
@@ -12,19 +12,23 @@ const KARATS = [
   { name: "18 قيراط", purity: 0.75, color: "#C5A028" },
 ];
 
+const OUNCE_TO_GRAM = 31.1035;
+
 export default function GoldCalculator() {
   const { ounceUsd, loading, error } = useGoldRate();
-  const [grams, setGrams] = useState(1);
-  const [selectedKarats, setSelectedKarats] = useState(KARATS.map((k) => k.name));
+  const [grams, setGrams] = useState<number>(1);
+  const [selectedKarats, setSelectedKarats] = useState<string[]>(KARATS.map((k) => k.name));
 
   const results = useMemo(() => {
-    if (!ounceUsd) return [];
+    if (!ounceUsd || ounceUsd <= 0) return [];
+
+    const gram24kPrice = ounceUsd / OUNCE_TO_GRAM;
 
     return KARATS.filter((k) => selectedKarats.includes(k.name)).map((karat) => {
-      const gramPrice = calculateGoldGrams(ounceUsd, karat.purity);
+      const gramPrice = gram24kPrice * karat.purity;
       return {
         ...karat,
-        gramPrice,
+        gramPrice: gramPrice,
         totalPrice: gramPrice * grams,
       };
     });
@@ -69,7 +73,7 @@ export default function GoldCalculator() {
         <input
           type="number"
           value={grams}
-          onChange={(e) => setGrams(Number(e.target.value))}
+          onChange={(e) => setGrams(Number(e.target.value) || 0)}
           min={0.1}
           step={0.1}
           className="w-full rounded-xl border border-border bg-background p-4 text-lg text-center focus:outline-none focus:ring-2 focus:ring-primary"
@@ -97,10 +101,7 @@ export default function GoldCalculator() {
                 }
               `}
             >
-              <span
-                className="inline-block w-3 h-3 rounded-full mr-1"
-                style={{ backgroundColor: karat.color }}
-              />
+              <span className="inline-block w-3 h-3 rounded-full mr-1" style={{ backgroundColor: karat.color }} />
               {karat.name}
             </button>
           ))}
@@ -109,15 +110,9 @@ export default function GoldCalculator() {
 
       <div className="space-y-2">
         {results.map((result) => (
-          <div
-            key={result.name}
-            className="flex items-center justify-between rounded-xl bg-card p-4 border border-border"
-          >
+          <div key={result.name} className="flex items-center justify-between rounded-xl bg-card p-4 border border-border">
             <div className="flex items-center gap-3">
-              <span
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: result.color }}
-              />
+              <span className="w-4 h-4 rounded-full" style={{ backgroundColor: result.color }} />
               <div>
                 <p className="font-medium">{result.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -133,7 +128,7 @@ export default function GoldCalculator() {
       </div>
 
       <p className="text-xs text-center text-muted-foreground">
-        ⚡ الأسعار محدثة لحظياً | الأونصة = 31.1035 غرام
+        ⚡ الأسعار محدثة لحظياً | الأونصة = {OUNCE_TO_GRAM} غرام
       </p>
     </div>
   );
