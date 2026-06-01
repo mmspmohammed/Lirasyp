@@ -1,6 +1,6 @@
 // app/prices/fuel/page.tsx
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase} from "@/lib/supabase-server";
 import { formatPrice } from "@/lib/format";
 import { ArrowLeft, Fuel, Droplets, Flame } from "lucide-react";
 import type { Metadata } from "next";
@@ -80,7 +80,7 @@ function FuelCard({
 // ==================== Data Fetching ====================
 
 async function getFuelData() {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
 
   const { data: fuels } = await supabase
     .from("fuel_prices")
