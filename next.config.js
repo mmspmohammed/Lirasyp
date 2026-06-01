@@ -11,10 +11,15 @@ const nextConfig = {
     ],
     unoptimized: false,
   },
-  
+
   compress: true,
   poweredByHeader: false,
-  
+
+  // ✅ Disable ESLint during builds (optional - install eslint if you want linting)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // ✅ حل مشكلة ESM على Netlify (Next.js 14)
   experimental: {
     serverComponentsExternalPackages: ['html-encoding-sniffer', '@exodus/bytes'],
