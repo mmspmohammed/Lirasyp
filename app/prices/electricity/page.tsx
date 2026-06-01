@@ -139,9 +139,7 @@ export default async function ElectricityPage() {
       <div className="rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
         <p className="font-medium mb-2">ℹ️ معلومات:</p>
         <ul className="space-y-1 list-disc list-inside">
-          <li>الأسعار بالليرة السورية</li>
-          <li>الشرائح تتدرج حسب كمية الاستهلاك</li>
-          <li>كلما زاد الاستهلاك، زاد سعر الكيلوواط</li>
+          <li>الأسعار بالليرة السورية القديمة</li>
           <li>الأسعار قابلة للتغيير حسب قرارات الحكومة</li>
         </ul>
       </div>
