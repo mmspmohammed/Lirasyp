@@ -173,7 +173,7 @@ export default async function HomePage() {
                         <td className="px-4 py-3 font-medium">{c.target_currency}</td>
                         <td className="px-4 py-3">{formatPrice(c.buy_price, "USD")}</td>
                         <td className={`px-4 py-3 ${color}`}>
-                          <span className="flex items-center gap-1">{icon}{formatChange(change)}</span>
+                          <span className="flex items-center gap-1">{formatChange(change)}</span>
                         </td>
                       </tr>
                     );
