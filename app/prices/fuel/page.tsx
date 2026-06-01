@@ -144,7 +144,7 @@ export default async function FuelPage() {
       <div className="mt-8 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
         <p className="font-medium mb-2">ℹ️ ملاحظات:</p>
         <ul className="space-y-1 list-disc list-inside">
-          <li>الأسعار مأخوذة من قرارات الحكومة</li>
+          <li>الأسعار قابلة للتغيير حسب قرارات الحكومة وسعر صرف الدولار</li>
           
         </ul>
       </div>
