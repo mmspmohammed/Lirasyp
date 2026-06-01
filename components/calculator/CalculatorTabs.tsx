@@ -1,5 +1,4 @@
 // components/calculator/CalculatorTabs.tsx
-
 "use client";
 
 import { useState } from "react";
