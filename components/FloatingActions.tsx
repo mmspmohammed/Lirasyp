@@ -1,4 +1,3 @@
-// components/FloatingActions.tsx
 "use client";
 
 import { useState } from "react";
