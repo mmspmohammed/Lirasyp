@@ -20,6 +20,7 @@ export default function PriceCardsCarousel({ cards }: { cards: CardData[] }) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    
     const interval = setInterval(() => {
       if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) {
         el.scrollTo({ left: 0, behavior: "smooth" });
@@ -27,18 +28,27 @@ export default function PriceCardsCarousel({ cards }: { cards: CardData[] }) {
         el.scrollTo({ left: el.scrollLeft + el.clientWidth * 0.8, behavior: "smooth" });
       }
     }, 4000);
+    
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div>
-      <div ref={scrollRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2">
+      <div 
+        ref={scrollRef} 
+        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
+      >
         {cards.map((card, i) => {
           const change = parseFloat(card.change) || 0;
           const { color: changeColor } = getChangeUI(change);
           const isPositive = change >= 0;
+          
           return (
-            <Link href={card.href} key={i} className="group block snap-start shrink-0 w-[85vw] sm:w-[300px]">
+            <Link 
+              href={card.href} 
+              key={i} 
+              className="group block snap-start shrink-0 w-[85vw] sm:w-[300px]"
+            >
               <div className="rounded-2xl bg-card p-5 border border-border transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-bold text-lg">{card.title}</h3>
@@ -58,6 +68,7 @@ export default function PriceCardsCarousel({ cards }: { cards: CardData[] }) {
           );
         })}
       </div>
+      
       <div className="mt-4 text-center">
         <button
           onClick={() => {
