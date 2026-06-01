@@ -144,10 +144,8 @@ export default async function FuelPage() {
       <div className="mt-8 rounded-xl bg-muted/50 p-4 text-sm text-muted-foreground">
         <p className="font-medium mb-2">ℹ️ ملاحظات:</p>
         <ul className="space-y-1 list-disc list-inside">
-          <li>الأسعار بالليرة السورية قد تختلف حسب المنطقة</li>
-          <li>البنزين أوكتان 95 هو الأكثر استخداماً للسيارات</li>
-          <li>المازوت يستخدم للتدفئة والصناعة</li>
-          <li>غاز المنازل (الأسطوانة) يختلف حسب الحجم</li>
+          <li>الأسعار مأخوذة من قرارات الحكومة</li>
+          
         </ul>
       </div>
     </div>
