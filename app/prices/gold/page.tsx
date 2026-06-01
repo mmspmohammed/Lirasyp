@@ -84,7 +84,8 @@ export default async function GoldPage() {
             <p className="text-sm text-muted-foreground mb-4">سعر الأونصة: {formatPrice(data.gold.price_usd, "USD")} | 1 أونصة = 31.1035 غرام</p>
             <div className="space-y-3">
               {karats.map((karat) => {
-                const gramPrice = calculateGoldGrams(data.gold.price_usd, data.gold.price_syp).gram24k.usd * karat.purity;
+                const goldData = calculateGoldGrams(data.gold!.price_usd, data.gold!.price_syp);
+                const gramPrice = goldData.gram24k.usd * karat.purity;
                 return (
                   <div key={karat.name} className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
                     <div className="flex items-center gap-3">
