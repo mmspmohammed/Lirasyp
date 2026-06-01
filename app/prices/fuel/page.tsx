@@ -1,6 +1,6 @@
 // app/prices/fuel/page.tsx
 import Link from "next/link";
-import { createServerSupabase} from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
 import { formatPrice } from "@/lib/format";
 import { ArrowLeft, Fuel, Droplets, Flame } from "lucide-react";
 import type { Metadata } from "next";
@@ -53,7 +53,7 @@ function FuelCard({
           className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
           style={{ backgroundColor: `${color}20`, color }}
         >
-          {icon}
+          
         </span>
         <div>
           <h3 className="font-bold text-lg">{name}</h3>
