@@ -140,7 +140,7 @@ export default async function CurrencyPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">سعر الشراء</p>
-                <p className="text-4xl font-extrabold text-red-600">{formatPrice(tryBuy * usdSypSell, "SYP")}</p>
+                <p className="text-4xl font-extrabold text-red-600">{formatPrice(((tryBuy * usdSypSell)-1), "SYP")}</p>
                 <p className="text-xs text-muted-foreground mt-1">ليرة سورية</p>
               </div>
               <div>
