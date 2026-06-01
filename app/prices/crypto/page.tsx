@@ -64,7 +64,7 @@ function CryptoCard({
         </div>
         <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${changeColor} bg-opacity-10`}>
           {changeIcon}
-          <span>{formatChange(change)}</span>
+          <span>{{change > 0 ? "+" : ""}{change.toFixed(2)}%}</span>
         </div>
       </div>
       <div className="text-center">
