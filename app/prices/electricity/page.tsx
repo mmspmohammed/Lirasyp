@@ -50,7 +50,7 @@ function TierCard({
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-muted-foreground">
-          الشريحة {tier}
+          الشريحة {}
         </span>
         {isActive && (
           <span className="text-xs px-2 py-1 rounded-full bg-primary text-white">
