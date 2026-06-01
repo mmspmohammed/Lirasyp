@@ -124,7 +124,7 @@ export default function CalculatorModal({ open, onClose }: Props) {
         {/* Footer hint */}
         <div className="px-5 py-3 border-t border-border text-center shrink-0">
           <p className="text-xs text-muted-foreground">
-            ⚡ الأسعار محدثة لحظياً من مصادر موثوقة
+            created by E: Mohammed
           </p>
         </div>
       </div>
