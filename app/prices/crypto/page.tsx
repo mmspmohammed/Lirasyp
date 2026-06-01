@@ -1,6 +1,7 @@
 // app/prices/crypto/page.tsx
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
+const supabase = createServerSupabase();
 import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
 import { ArrowLeft, TrendingUp, TrendingDown, Bitcoin } from "lucide-react";
 import type { Metadata } from "next";
