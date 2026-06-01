@@ -12,7 +12,7 @@ export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Promise<<Metadata> {
+}): Promise<Metadata> {
   const supabase = createServerSupabase();
   
   // ✅ فك تشفير الـ slug
