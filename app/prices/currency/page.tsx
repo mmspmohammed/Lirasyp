@@ -1,7 +1,8 @@
 // app/prices/currency/page.tsx
 import { Suspense } from "react";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
+const supabase = createServerSupabase();
 import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, RefreshCw } from "lucide-react";
 import type { Metadata } from "next";
