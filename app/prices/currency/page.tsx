@@ -40,11 +40,11 @@ function CurrencyRow({ currency, buyPrice, change, usdSypRate }: {
       <div className="text-left">
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">السعر بالدولار</p>
+            
             <p className="font-bold">{formatPrice(buyPrice, "USD")}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">السعر بالليرة</p>
+            
             <p className="font-bold">{formatPrice(priceSyp, "SYP")}</p>
           </div>
           <div className={"flex items-center gap-1 " + changeColor}>
