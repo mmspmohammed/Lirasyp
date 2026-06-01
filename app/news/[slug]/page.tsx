@@ -2,7 +2,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
-const supabase = createServerSupabase();
 import { sanitizeHTML } from "@/lib/sanitize";
 import { formatDateAR } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/categories";
@@ -16,7 +15,7 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
   const { data: article } = await supabase
     .from("news_articles")
     .select("title_ar, summary, category, image_url, seo_keywords")
@@ -55,7 +54,7 @@ export async function generateMetadata({
 // ==================== Data Fetching ====================
 
 async function getArticle(slug: string) {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
 
   const { data: article } = await supabase
     .from("news_articles")
