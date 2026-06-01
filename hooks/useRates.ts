@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase";
 
 export interface Rate {
   code: string;
@@ -15,14 +15,13 @@ export function useRates() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createBrowserClient();
+    const supabase = createClient();
 
     async function fetchRates() {
       try {
         setLoading(true);
         setError(null);
 
-        // جلب أسعار الصرف (USD → العملات)
         const { data: exchangeData, error: exchangeErr } = await supabase
           .from("exchange_rates")
           .select("base_currency, target_currency, buy_price, sell_price")
@@ -30,7 +29,6 @@ export function useRates() {
 
         if (exchangeErr) throw exchangeErr;
 
-        // جلب أسعار الأصول (ذهب + كريبتو)
         const { data: assetData, error: assetErr } = await supabase
           .from("asset_prices")
           .select("asset_code, asset_type, price_usd, price_syp")
@@ -39,14 +37,8 @@ export function useRates() {
         if (assetErr) throw assetErr;
 
         const mapped: Record<string, number> = {};
-
-        // ✅ USD هو العملة الأساسية = 1
         mapped["USD"] = 1;
 
-        // إضافة أسعار الصرف
-        // buy_price = 1/newRate (من API)
-        // يعني: buy_price = عدد USD لكل 1 unit من العملة
-        // مثال: EUR buy_price = 1.087 يعني 1 EUR = 1.087 USD
         exchangeData?.forEach((item: any) => {
           const rate = item.sell_price || item.buy_price;
           if (rate && rate > 0) {
@@ -54,14 +46,9 @@ export function useRates() {
           }
         });
 
-        // إضافة أسعار الأصول
         assetData?.forEach((item: any) => {
-          if (item.price_usd) {
-            mapped[item.asset_code] = item.price_usd;
-          }
-          if (item.price_syp) {
-            mapped[`${item.asset_code}_SYP`] = item.price_syp;
-          }
+          if (item.price_usd) mapped[item.asset_code] = item.price_usd;
+          if (item.price_syp) mapped[`${item.asset_code}_SYP`] = item.price_syp;
         });
 
         setRates(mapped);
@@ -75,38 +62,14 @@ export function useRates() {
 
     fetchRates();
 
-    // Realtime subscription لـ exchange_rates
     const channel = supabase
       .channel("exchange-rates-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "exchange_rates",
-          filter: "is_latest=eq.true",
-        },
-        () => {
-          fetchRates();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "exchange_rates", filter: "is_latest=eq.true" }, () => fetchRates())
       .subscribe();
 
-    // Realtime subscription لـ asset_prices
     const channel2 = supabase
       .channel("asset-prices-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "asset_prices",
-          filter: "is_latest=eq.true",
-        },
-        () => {
-          fetchRates();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "asset_prices", filter: "is_latest=eq.true" }, () => fetchRates())
       .subscribe();
 
     return () => {
@@ -118,17 +81,11 @@ export function useRates() {
   return { rates, loading, error };
 }
 
-// Hook متخصص لسعر USD/SYP
 export function useUsdSypRate() {
   const { rates, loading, error } = useRates();
-  return {
-    rate: rates["SYP"] || null,
-    loading,
-    error,
-  };
+  return { rate: rates["SYP"] || null, loading, error };
 }
 
-// Hook متخصص لأسعار الكريبتو
 export function useCryptoRates() {
   const { rates, loading, error } = useRates();
   return {
@@ -141,18 +98,11 @@ export function useCryptoRates() {
       TRX: rates["TRX"] || null,
       PAXG: rates["PAXG"] || null,
     },
-    loading,
-    error,
+    loading, error,
   };
 }
 
-// Hook متخصص لسعر الذهب
 export function useGoldRate() {
   const { rates, loading, error } = useRates();
-  return {
-    ounceUsd: rates["XAU"] || null,
-    paxgUsd: rates["PAXG"] || null,
-    loading,
-    error,
-  };
+  return { ounceUsd: rates["XAU"] || null, paxgUsd: rates["PAXG"] || null, loading, error };
 }
