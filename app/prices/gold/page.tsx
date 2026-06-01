@@ -1,6 +1,6 @@
 // app/prices/gold/page.tsx
 import Link from "next/link";
-import { createServerSupabase} from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
 import { formatPrice, formatChange, getChangeUI, calculateGoldGrams } from "@/lib/format";
 import { ArrowLeft, TrendingUp, TrendingDown, Gem } from "lucide-react";
 import type { Metadata } from "next";
@@ -43,7 +43,7 @@ function GoldCard({
   icon: string;
   color: string;
 }) {
-  const { icon: changeIcon, color: changeColor } = getChangeUI(change);
+  const { color: changeColor } = getChangeUI(change);
 
   return (
     <div className="rounded-2xl bg-card p-5 border border-border">
