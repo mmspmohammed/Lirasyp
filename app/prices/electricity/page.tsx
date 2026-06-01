@@ -1,6 +1,6 @@
 // app/prices/electricity/page.tsx
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
 import { formatPrice } from "@/lib/format";
 import { ArrowLeft, Zap, Lightbulb, Calculator } from "lucide-react";
 import type { Metadata } from "next";
@@ -72,7 +72,7 @@ function TierCard({
 // ==================== Data Fetching ====================
 
 async function getElectricityData() {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
 
   const { data: tiers } = await supabase
     .from("electricity_tariffs")
