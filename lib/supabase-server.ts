@@ -3,22 +3,29 @@ import { cookies } from 'next/headers';
 
 /**
  * ✅ عميل Supabase للخوادم (Server Components & Server Actions)
- * يستخدم cookies() من next/headers للتعامل مع الجلسة بأمان
  */
-export const createServerClient= () => {
+export const createServerSupabase = () => {
   const cookieStore = cookies();
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        // ✅ نترك set/remove فارغة لأن القراءة تكفي لعرض الأسعار العامة
-        set() {},
-        remove() {},
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
       },
     }
   );
