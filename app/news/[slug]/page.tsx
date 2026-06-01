@@ -1,7 +1,8 @@
 // app/news/[slug]/page.tsx
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase-server";
+import { createServerSupabase } from "@/lib/supabase-server";
+const supabase = createServerSupabase();
 import { sanitizeHTML } from "@/lib/sanitize";
 import { formatDateAR } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/categories";
