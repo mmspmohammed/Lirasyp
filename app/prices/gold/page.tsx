@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "أسعار الذهب | أونصة وعيارات",
-  description: "أسعار الذهب العالمية بالأونصة والجرام. حساب تلقائي لعيارات 24، 22، 21، 18 قيراط.",
+  description: "أسعار الذهب العالمية بالأونصة والجرام. حساب تلقائي لعيارات 24، 22، 21، 18، 14 قيراط.",
 };
 
 export const revalidate = 60;
@@ -34,6 +34,7 @@ export default async function GoldPage() {
     { name: "22 قيراط", purity: 0.916, color: "#E5C100" },
     { name: "21 قيراط", purity: 0.875, color: "#D4AF37" },
     { name: "18 قيراط", purity: 0.75, color: "#C5A028" },
+    { name: "14 قيراط", purity: 0.5833, color: "#FFD700" },
   ];
 
   return (
