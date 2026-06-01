@@ -12,72 +12,70 @@ export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Promise<Metadata> {
-  const supabase = createServerSupabase();
-  
-  // ✅ فك تشفير الـ slug
-  const slug = decodeURIComponent(params.slug);
-  
-  const { data: article, error } = await supabase
-    .from("news_articles")
-    .select("title_ar, summary, category, image_url, seo_keywords")
-    .eq("slug", slug)
-    .limit(1)
-    .maybeSingle();
+}): Promise<<Metadata> {
+  try {
+    const supabase = createServerSupabase();
+    const slug = decodeURIComponent(params.slug || "");
 
-  if (!article || error) {
+    if (!slug) return { title: "الخبر غير موجود" };
+
+    const { data: article } = await supabase
+      .from("news_articles")
+      .select("title_ar, summary, category, image_url, seo_keywords")
+      .eq("slug", slug)
+      .limit(1)
+      .maybeSingle();
+
+    if (!article) return { title: "الخبر غير موجود" };
+
+    const meta = CATEGORY_META[article.category as keyof typeof CATEGORY_META] || CATEGORY_META.economy;
+
     return {
-      title: "الخبر غير موجود",
+      title: article.title_ar || "خبر",
+      description: article.summary || "",
+      keywords: article.seo_keywords || [meta.label, "سوريا", "اقتصاد"],
+      openGraph: {
+        title: article.title_ar || "",
+        description: article.summary || "",
+        images: article.image_url ? [{ url: article.image_url }] : undefined,
+      },
     };
+  } catch {
+    return { title: "الخبر غير موجود" };
   }
-
-  const meta = CATEGORY_META[article.category as keyof typeof CATEGORY_META] || CATEGORY_META.economy;
-
-  return {
-    title: article.title_ar,
-    description: article.summary,
-    keywords: article.seo_keywords || [meta.label, "سوريا", "اقتصاد"],
-    openGraph: {
-      title: article.title_ar,
-      description: article.summary,
-      images: article.image_url ? [{ url: article.image_url }] : undefined,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: article.title_ar,
-      description: article.summary,
-      images: article.image_url ? [article.image_url] : undefined,
-    },
-    alternates: {
-      canonical: `https://lirasyp.sy/news/${slug}`,
-    },
-  };
 }
 
 async function getArticle(slug: string) {
-  const supabase = createServerSupabase();
+  try {
+    const supabase = createServerSupabase();
 
-  const { data: article, error } = await supabase
-    .from("news_articles")
-    .select("*")
-    .eq("slug", slug)
-    .limit(1)
-    .maybeSingle();
+    const { data: article, error } = await supabase
+      .from("news_articles")
+      .select("*")
+      .eq("slug", slug)
+      .limit(1)
+      .maybeSingle();
 
-  if (error || !article) {
-    console.error("Error fetching article:", error);
+    if (error) {
+      console.error("Supabase error:", error);
+      return null;
+    }
+
+    if (!article) return null;
+
+    const { data: related } = await supabase
+      .from("news_articles")
+      .select("title_ar, slug, summary, category, published_at")
+      .eq("category", article.category || "economy")
+      .neq("slug", slug)
+      .order("published_at", { ascending: false })
+      .limit(3);
+
+    return { article, related: related || [] };
+  } catch (err) {
+    console.error("getArticle error:", err);
     return null;
   }
-
-  const { data: related } = await supabase
-    .from("news_articles")
-    .select("title_ar, slug, summary, category, published_at")
-    .eq("category", article.category)
-    .neq("slug", slug)
-    .order("published_at", { ascending: false })
-    .limit(3);
-
-  return { article, related: related || [] };
 }
 
 export default async function ArticlePage({
@@ -85,7 +83,12 @@ export default async function ArticlePage({
 }: {
   params: { slug: string };
 }) {
-  const slug = decodeURIComponent(params.slug);
+  const slug = decodeURIComponent(params.slug || "");
+
+  if (!slug) {
+    notFound();
+  }
+
   const data = await getArticle(slug);
 
   if (!data) {
@@ -93,9 +96,13 @@ export default async function ArticlePage({
   }
 
   const { article, related } = data;
-  const meta = CATEGORY_META[article.category as keyof typeof CATEGORY_META] || CATEGORY_META.economy;
 
-  const cleanContent = sanitizeHTML(article.content || article.summary);
+  // ✅ دفاعي: إذا أي حقل ناقص، ما بيوقف الصفحة
+  const meta = CATEGORY_META[(article.category as keyof typeof CATEGORY_META) || "economy"] || CATEGORY_META.economy;
+  const cleanContent = sanitizeHTML(article.content || article.summary || "");
+  const title = article.title_ar || "خبر";
+  const source = article.source_name || "غير معروف";
+  const published = article.published_at || new Date().toISOString();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -104,7 +111,7 @@ export default async function ArticlePage({
         <ArrowLeft className="w-4 h-4" />
         <Link href="/news" className="hover:text-primary transition">الأخبار</Link>
         <ArrowLeft className="w-4 h-4" />
-        <span className="line-clamp-1">{article.title_ar}</span>
+        <span className="line-clamp-1">{title}</span>
       </nav>
 
       <article className="max-w-3xl mx-auto">
@@ -117,19 +124,19 @@ export default async function ArticlePage({
           </span>
           <span className="text-sm text-muted-foreground flex items-center gap-1">
             <Calendar className="w-4 h-4" />
-            {formatDateAR(article.published_at)}
+            {formatDateAR(published)}
           </span>
         </div>
 
         <h1 className="text-3xl md:text-4xl font-extrabold mb-6 leading-tight">
-          {article.title_ar}
+          {title}
         </h1>
 
         {article.image_url && (
           <div className="rounded-2xl overflow-hidden mb-6">
             <img
               src={article.image_url}
-              alt={article.title_ar}
+              alt={title}
               className="w-full h-64 md:h-96 object-cover"
               loading="eager"
             />
@@ -140,7 +147,7 @@ export default async function ArticlePage({
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              المصدر: <strong>{article.source_name}</strong>
+              المصدر: <strong>{source}</strong>
             </span>
           </div>
           {article.source_url && (
@@ -166,10 +173,10 @@ export default async function ArticlePage({
           <span className="text-sm text-muted-foreground">مشاركة:</span>
           <button
             onClick={() => {
-              if (navigator.share) {
+              if (typeof navigator !== "undefined" && navigator.share) {
                 navigator.share({
-                  title: article.title_ar,
-                  url: `https://lirasyp.sy/news/${article.slug}`,
+                  title: title,
+                  url: `https://lirasyp.sy/news/${article.slug || slug}`,
                 });
               }
             }}
@@ -179,65 +186,35 @@ export default async function ArticlePage({
           </button>
         </div>
 
-        {related.length > 0 && (
+        {related && related.length > 0 && (
           <section className="border-t border-border pt-8">
             <h2 className="text-xl font-bold mb-4">مقالات ذات صلة</h2>
             <div className="grid gap-4 md:grid-cols-3">
-              {related.map((r: any) => (
-                <Link key={r.slug} href={`/news/${r.slug}`} className="group block">
-                  <article className="rounded-xl bg-card p-4 border border-border hover:border-primary/20 transition">
-                    <span
-                      className="text-xs px-2 py-1 rounded-full"
-                      style={{
-                        backgroundColor: `${CATEGORY_META[r.category as keyof typeof CATEGORY_META]?.color || CATEGORY_META.economy.color}20`,
-                        color: CATEGORY_META[r.category as keyof typeof CATEGORY_META]?.color || CATEGORY_META.economy.color,
-                      }}
-                    >
-                      {CATEGORY_META[r.category as keyof typeof CATEGORY_META]?.label || "اقتصاد"}
-                    </span>
-                    <h3 className="font-bold mt-2 group-hover:text-primary transition-colors line-clamp-2">
-                      {r.title_ar}
-                    </h3>
-                  </article>
-                </Link>
-              ))}
+              {related.map((r: any) => {
+                const rMeta = CATEGORY_META[(r.category as keyof typeof CATEGORY_META) || "economy"] || CATEGORY_META.economy;
+                return (
+                  <Link key={r.slug || Math.random()} href={`/news/${r.slug || ""}`} className="group block">
+                    <article className="rounded-xl bg-card p-4 border border-border hover:border-primary/20 transition">
+                      <span
+                        className="text-xs px-2 py-1 rounded-full"
+                        style={{
+                          backgroundColor: `${rMeta.color}20`,
+                          color: rMeta.color,
+                        }}
+                      >
+                        {rMeta.label}
+                      </span>
+                      <h3 className="font-bold mt-2 group-hover:text-primary transition-colors line-clamp-2">
+                        {r.title_ar || "خبر"}
+                      </h3>
+                    </article>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
       </article>
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "NewsArticle",
-            headline: article.title_ar,
-            description: article.summary,
-            image: article.image_url ? [article.image_url] : [],
-            datePublished: article.published_at,
-            dateModified: article.updated_at || article.published_at,
-            author: {
-              "@type": "Organization",
-              name: article.source_name,
-            },
-            publisher: {
-              "@type": "Organization",
-              name: "LiraSYP",
-              logo: {
-                "@type": "ImageObject",
-                url: "https://lirasyp.sy/logo.png",
-              },
-            },
-            mainEntityOfPage: {
-              "@type": "WebPage",
-              "@id": `https://lirasyp.sy/news/${article.slug}`,
-            },
-            articleBody: article.content,
-            keywords: article.seo_keywords?.join(", "),
-          }),
-        }}
-      />
     </div>
   );
 }
