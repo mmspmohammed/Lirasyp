@@ -1,13 +1,7 @@
-// hooks/useRates.ts
 "use client";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-
-export interface Rate {
-  code: string;
-  price: number;
-}
 
 export function useRates() {
   const [rates, setRates] = useState<Record<string, number>>({});
@@ -41,9 +35,7 @@ export function useRates() {
 
         exchangeData?.forEach((item: any) => {
           const rate = item.sell_price || item.buy_price;
-          if (rate && rate > 0) {
-            mapped[item.target_currency] = rate;
-          }
+          if (rate && rate > 0) mapped[item.target_currency] = rate;
         });
 
         assetData?.forEach((item: any) => {
