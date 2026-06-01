@@ -2,7 +2,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
-
 import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
 import { TrendingUp, TrendingDown, Newspaper, DollarSign, Coins, Zap, Fuel, ArrowLeft, Bell } from "lucide-react";
 
@@ -21,7 +20,7 @@ function PriceCard({ title, icon, price, change, unit, href, color }: {
   title: string; icon: React.ReactNode; price: string; change: string;
   unit: string; href: string; color: string;
 }) {
-  const { icon: changeIcon, color: changeColor } = getChangeUI(parseFloat(change) || 0);
+  const { color: changeColor } = getChangeUI(parseFloat(change) || 0);
   const isPositive = parseFloat(change) >= 0;
   return (
     <Link href={href} className="group block">
@@ -139,7 +138,7 @@ export default async function HomePage() {
               <Bell className="w-6 h-6 text-red-500" />
             </div>
             <div>
-              <h3 className="font-bold text-base">🔔 تفعيل التنبيهات</h3>
+              <h3 className="font-bold text-base">🔔 فعّل التنبيهات لتصلك كل التغيرات</h3>
               <p className="text-sm text-muted-foreground">
                 احصل على إشعارات فورية عند تغير أسعار الدولار، الذهب، والعملات الرقمية.
               </p>
