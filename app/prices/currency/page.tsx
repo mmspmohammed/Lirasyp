@@ -2,7 +2,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
-const supabase = createServerSupabase();
+
 import { formatPrice, formatChange, getChangeUI } from "@/lib/format";
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, RefreshCw } from "lucide-react";
 import type { Metadata } from "next";
@@ -105,7 +105,7 @@ function CurrencyRow({
 // ==================== Data Fetching ====================
 
 async function getCurrencyData() {
-  const supabase = createServerClient();
+  const supabase = createServerSupabase();
 
   // جلب USD/SYP (الرئيسي)
   const { data: usdSyp } = await supabase
