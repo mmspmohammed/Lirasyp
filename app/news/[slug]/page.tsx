@@ -1,30 +1,24 @@
-// app/news/[slug]/page.tsx
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
 import { sanitizeHTML } from "@/lib/sanitize";
 import { formatDateAR } from "@/lib/format";
 import { CATEGORY_META } from "@/lib/categories";
-import { ArrowLeft, Calendar, Tag, Share2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 
-// ✅ دالة آمنة لفك تشفير الـ slug
-function safeDecodeSlug(raw: string): string {
-  if (!raw) return "";
+// ✅ client بسيط بدون cookies للبيانات العامة
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export const dynamic = "force-dynamic";
+
+function safeDecode(raw: string): string {
   try {
-    // جرب فك التشفير
-    let decoded = decodeURIComponent(raw);
-    // إذا كان فيه % بعد أول فك، جرب مرة تانية
-    if (decoded.includes("%")) {
-      try {
-        decoded = decodeURIComponent(decoded);
-      } catch {
-        // تجاهل
-      }
-    }
-    return decoded;
+    return decodeURIComponent(raw);
   } catch {
-    // إذا فشل فك التشفير، رجّع كما هو
     return raw;
   }
 }
@@ -33,98 +27,47 @@ export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Promise<Metadata> {
-  try {
-    const supabase = createServerSupabase();
-    const slug = safeDecodeSlug(params.slug || "");
+}): Promise<<Metadata> {
+  const slug = safeDecode(params.slug || "");
 
-    if (!slug) return { title: "الخبر غير موجود" };
+  const { data: article } = await supabase
+    .from("news_articles")
+    .select("title_ar, summary, category, image_url")
+    .eq("slug", slug)
+    .limit(1)
+    .maybeSingle();
 
-    // ✅ جرب البحث بالـ slug كما هو، وإذا ما لقى، جرب التشفير/فك التشفير
-    let { data: article } = await supabase
-      .from("news_articles")
-      .select("title_ar, summary, category, image_url, seo_keywords")
-      .eq("slug", slug)
-      .limit(1)
-      .maybeSingle();
+  if (!article) return { title: "الخبر غير موجود" };
 
-    // إذا ما لقى، جرب encodeURIComponent
-    if (!article) {
-      const encoded = encodeURIComponent(slug);
-      const res = await supabase
-        .from("news_articles")
-        .select("title_ar, summary, category, image_url, seo_keywords")
-        .eq("slug", encoded)
-        .limit(1)
-        .maybeSingle();
-      article = res.data;
-    }
-
-    if (!article) return { title: "الخبر غير موجود" };
-
-    const meta = CATEGORY_META[(article.category as keyof typeof CATEGORY_META) || "economy"] || CATEGORY_META.economy;
-
-    return {
-      title: article.title_ar || "خبر",
-      description: article.summary || "",
-      keywords: article.seo_keywords || [meta.label, "سوريا", "اقتصاد"],
-      openGraph: {
-        title: article.title_ar || "",
-        description: article.summary || "",
-        images: article.image_url ? [{ url: article.image_url }] : undefined,
-      },
-    };
-  } catch {
-    return { title: "الخبر غير موجود" };
-  }
+  return {
+    title: article.title_ar || "خبر",
+    description: article.summary || "",
+  };
 }
 
-async function getArticle(rawSlug: string) {
-  try {
-    const supabase = createServerSupabase();
-    const slug = safeDecodeSlug(rawSlug);
+async function getArticle(slug: string) {
+  const { data: article, error } = await supabase
+    .from("news_articles")
+    .select("*")
+    .eq("slug", slug)
+    .limit(1)
+    .maybeSingle();
 
-    if (!slug) return null;
-
-    // ✅ جرب البحث بالـ slug كما هو
-    let { data: article, error } = await supabase
-      .from("news_articles")
-      .select("*")
-      .eq("slug", slug)
-      .limit(1)
-      .maybeSingle();
-
-    // إذا ما لقى، جرب encodeURIComponent
-    if (!article && !error) {
-      const encoded = encodeURIComponent(slug);
-      const res = await supabase
-        .from("news_articles")
-        .select("*")
-        .eq("slug", encoded)
-        .limit(1)
-        .maybeSingle();
-      article = res.data;
-      error = res.error;
-    }
-
-    if (error || !article) {
-      console.error("Article not found for slug:", slug);
-      return null;
-    }
-
-    const { data: related } = await supabase
-      .from("news_articles")
-      .select("title_ar, slug, summary, category, published_at")
-      .eq("category", article.category || "economy")
-      .neq("slug", article.slug)
-      .order("published_at", { ascending: false })
-      .limit(3);
-
-    return { article, related: related || [] };
-  } catch (err) {
-    console.error("getArticle error:", err);
+  if (error) {
+    console.error("Supabase error:", error.message);
     return null;
   }
+  if (!article) return null;
+
+  const { data: related } = await supabase
+    .from("news_articles")
+    .select("title_ar, slug, category, published_at")
+    .eq("category", article.category || "economy")
+    .neq("slug", slug)
+    .order("published_at", { ascending: false })
+    .limit(3);
+
+  return { article, related: related || [] };
 }
 
 export default async function ArticlePage({
@@ -132,21 +75,22 @@ export default async function ArticlePage({
 }: {
   params: { slug: string };
 }) {
-  const data = await getArticle(params.slug || "");
+  const slug = safeDecode(params.slug || "");
+  const data = await getArticle(slug);
 
-  if (!data) {
-    notFound();
-  }
+  if (!data) notFound();
 
   const { article, related } = data;
 
-  // ✅ دفاعي: كل الحقول مع fallback
-  const meta = CATEGORY_META[(article.category as keyof typeof CATEGORY_META) || "economy"] || CATEGORY_META.economy;
-  const cleanContent = sanitizeHTML(article.content || article.summary || "");
+  // ✅ fallback لكل قيمة
+  const categoryKey = (article.category as keyof typeof CATEGORY_META) || "economy";
+  const meta = CATEGORY_META[categoryKey] || CATEGORY_META.economy;
   const title = article.title_ar || "خبر";
-  const source = article.source_name || "غير معروف";
-  const published = article.published_at || new Date().toISOString();
-  const slug = article.slug || params.slug || "";
+  const summary = article.summary || "";
+  const content = sanitizeHTML(article.content || summary);
+  const source = article.source_name || "";
+  const date = article.published_at || new Date().toISOString();
+  const image = article.image_url || null;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -159,16 +103,13 @@ export default async function ArticlePage({
       </nav>
 
       <article className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-3 mb-4">
-          <span
-            className="text-sm px-3 py-1 rounded-full font-medium"
-            style={{ backgroundColor: `${meta.color}20`, color: meta.color }}
-          >
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <span className="text-sm px-3 py-1 rounded-full font-medium bg-primary/10 text-primary">
             {meta.label}
           </span>
           <span className="text-sm text-muted-foreground flex items-center gap-1">
             <Calendar className="w-4 h-4" />
-            {formatDateAR(published)}
+            {formatDateAR(date)}
           </span>
         </div>
 
@@ -176,10 +117,10 @@ export default async function ArticlePage({
           {title}
         </h1>
 
-        {article.image_url && (
+        {image && (
           <div className="rounded-2xl overflow-hidden mb-6">
             <img
-              src={article.image_url}
+              src={image}
               alt={title}
               className="w-full h-64 md:h-96 object-cover"
               loading="eager"
@@ -187,65 +128,53 @@ export default async function ArticlePage({
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-6 p-4 rounded-xl bg-muted/50">
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              المصدر: <strong>{source}</strong>
-            </span>
+        {source && (
+          <div className="flex items-center justify-between mb-6 p-4 rounded-xl bg-muted/50">
+            <div className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                المصدر: <strong>{source}</strong>
+              </span>
+            </div>
+            {article.source_url && (
+              <a
+                href={article.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+              >
+                <ExternalLink className="w-4 h-4" />
+                المصدر الأصلي
+              </a>
+            )}
           </div>
-          {article.source_url && (
-            <a
-              href={article.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline flex items-center gap-1"
-            >
-              <ExternalLink className="w-4 h-4" />
-              المصدر الأصلي
-            </a>
-          )}
-        </div>
+        )}
 
-        <div
-          className="prose prose-lg max-w-none dark:prose-invert mb-8"
-          dangerouslySetInnerHTML={{ __html: cleanContent }}
-        />
+        {content ? (
+          <div
+            className="prose prose-lg max-w-none dark:prose-invert mb-8"
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        ) : (
+          <p className="text-muted-foreground mb-8">{summary}</p>
+        )}
 
-        <div className="flex items-center gap-3 mb-8 p-4 rounded-xl bg-muted/50">
-          <Share2 className="w-5 h-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">مشاركة:</span>
-          <button
-            onClick={() => {
-              if (typeof navigator !== "undefined" && navigator.share) {
-                navigator.share({
-                  title: title,
-                  url: `https://lirasyp.sy/news/${slug}`,
-                });
-              }
-            }}
-            className="text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition"
-          >
-            مشاركة
-          </button>
-        </div>
-
-        {related && related.length > 0 && (
+        {related.length > 0 && (
           <section className="border-t border-border pt-8">
             <h2 className="text-xl font-bold mb-4">مقالات ذات صلة</h2>
             <div className="grid gap-4 md:grid-cols-3">
               {related.map((r: any) => {
-                const rMeta = CATEGORY_META[(r.category as keyof typeof CATEGORY_META) || "economy"] || CATEGORY_META.economy;
+                const rMeta =
+                  CATEGORY_META[(r.category as keyof typeof CATEGORY_META) || "economy"] ||
+                  CATEGORY_META.economy;
                 return (
-                  <Link key={r.slug || Math.random()} href={`/news/${r.slug || ""}`} className="group block">
+                  <Link
+                    key={r.slug || Math.random()}
+                    href={`/news/${r.slug || ""}`}
+                    className="group block"
+                  >
                     <article className="rounded-xl bg-card p-4 border border-border hover:border-primary/20 transition">
-                      <span
-                        className="text-xs px-2 py-1 rounded-full"
-                        style={{
-                          backgroundColor: `${rMeta.color}20`,
-                          color: rMeta.color,
-                        }}
-                      >
+                      <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
                         {rMeta.label}
                       </span>
                       <h3 className="font-bold mt-2 group-hover:text-primary transition-colors line-clamp-2">
