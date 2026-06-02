@@ -12,6 +12,7 @@ interface Props {
 export default function NotificationModal({ open, onClose }: Props) {
   const [status, setStatus] = useState<"idle" | "loading" | "granted" | "denied" | "unsupported">("idle");
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
@@ -56,6 +57,7 @@ export default function NotificationModal({ open, onClose }: Props) {
 
   async function subscribe() {
     setStatus("loading");
+    setErrorMsg("");
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -68,27 +70,31 @@ export default function NotificationModal({ open, onClose }: Props) {
 
       if (!vapidKey) {
         console.error("VAPID_PUBLIC_KEY not configured");
+        setErrorMsg("خطأ: VAPID_PUBLIC_KEY غير معروف");
         setStatus("idle");
         return;
       }
 
-            const newSub = await registration.pushManager.subscribe({
+      const newSub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey) as unknown as BufferSource,
       });
 
+      console.log("✅ Push subscription created:", newSub);
 
       await saveSubscription(newSub);
       setSubscription(newSub);
       setStatus("granted");
-    } catch (err) {
-      console.error("Subscribe error:", err);
+    } catch (err: any) {
+      console.error("❌ Subscribe error:", err);
+      setErrorMsg(err.message || "حدث خطأ أثناء تفعيل الإشعارات");
       setStatus("idle");
     }
   }
 
   async function unsubscribe() {
     setStatus("loading");
+    setErrorMsg("");
     try {
       if (subscription) await subscription.unsubscribe();
       const registration = await navigator.serviceWorker.ready;
@@ -98,34 +104,54 @@ export default function NotificationModal({ open, onClose }: Props) {
       await deleteSubscription();
       setSubscription(null);
       setStatus("idle");
-    } catch (err) {
-      console.error("Unsubscribe error:", err);
+    } catch (err: any) {
+      console.error("❌ Unsubscribe error:", err);
+      setErrorMsg(err.message || "حدث خطأ أثناء إيقاف الإشعارات");
       setStatus("granted");
     }
   }
 
   async function saveSubscription(sub: PushSubscription) {
     const json = sub.toJSON();
+    const payload = {
+      endpoint: sub.endpoint,
+      auth: json.keys?.auth,
+      p256dh: json.keys?.p256dh,
+      user_agent: navigator.userAgent,
+    };
+
+    console.log("📤 Sending subscription to API:", payload);
+
     const res = await fetch("/api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        endpoint: sub.endpoint,
-        auth: json.keys?.auth,
-        p256dh: json.keys?.p256dh,
-        user_agent: navigator.userAgent,
-      }),
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error("Failed to save subscription");
+
+    const responseData = await res.json();
+    console.log("📥 API Response:", responseData);
+
+    if (!res.ok) {
+      throw new Error(responseData.error || "Failed to save subscription");
+    }
   }
 
   async function deleteSubscription() {
+    const payload = { endpoint: subscription?.endpoint };
+    console.log("📤 Sending unsubscribe to API:", payload);
+
     const res = await fetch("/api/unsubscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint: subscription?.endpoint }),
+      body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error("Failed to delete subscription");
+
+    const responseData = await res.json();
+    console.log("📥 API Response:", responseData);
+
+    if (!res.ok) {
+      throw new Error(responseData.error || "Failed to delete subscription");
+    }
   }
 
   if (!open) return null;
@@ -169,6 +195,9 @@ export default function NotificationModal({ open, onClose }: Props) {
               <p className="text-sm text-muted-foreground mb-6">
                 احصل على إشعارات فورية عند تغير الأسعار.
               </p>
+              {errorMsg && (
+                <p className="text-sm text-red-500 mb-4 bg-red-500/10 p-3 rounded-lg">{errorMsg}</p>
+              )}
               <button onClick={subscribe} className="px-6 py-3 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition shadow-lg">
                 تفعيل الإشعارات
               </button>
