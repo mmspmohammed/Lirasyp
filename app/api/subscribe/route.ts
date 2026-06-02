@@ -1,6 +1,6 @@
 // app/api/subscribe/route.ts
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +11,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const supabase = createServerSupabase();
+    // ✅ استخدام Admin Client باستخدام SERVICE_ROLE_KEY
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     const { error } = await supabase
       .from("push_subscriptions")
@@ -26,7 +30,10 @@ export async function POST(request: Request) {
         { onConflict: "endpoint" }
       );
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase upsert error:", error);
+      throw error;
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
