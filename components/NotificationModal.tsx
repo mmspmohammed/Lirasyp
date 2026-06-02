@@ -10,8 +10,8 @@ interface Props {
 }
 
 export default function NotificationModal({ open, onClose }: Props) {
-  const [status, setStatus] = useState<<"idle" | "loading" | "granted" | "denied" | "unsupported">("idle");
-  const [subscription, setSubscription] = useState<<PushSubscription | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "granted" | "denied" | "unsupported">("idle");
+  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
@@ -74,7 +74,7 @@ export default function NotificationModal({ open, onClose }: Props) {
 
       const newSub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey) as ArrayBufferView,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
 
       await saveSubscription(newSub);
@@ -206,9 +206,5 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
+  return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
 }
