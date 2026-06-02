@@ -27,7 +27,7 @@ export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Promise<<Metadata> {
+}): Promise<Metadata> {
   const slug = safeDecode(params.slug || "");
 
   const { data: article } = await supabase
