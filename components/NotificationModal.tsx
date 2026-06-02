@@ -10,8 +10,8 @@ interface Props {
 }
 
 export default function NotificationModal({ open, onClose }: Props) {
-  const [status, setStatus] = useState<<"idle" | "loading" | "granted" | "denied" | "unsupported">("idle");
-  const [subscription, setSubscription] = useState<<PushSubscription | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "granted" | "denied" | "unsupported">("idle");
+  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
