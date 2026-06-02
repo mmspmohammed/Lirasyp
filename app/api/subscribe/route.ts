@@ -17,22 +17,49 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { error } = await supabase
+    // أولاً: تحقق من وجود الاشتراك
+    const { data: existing } = await supabase
       .from("push_subscriptions")
-      .upsert(
-        {
+      .select("id")
+      .eq("endpoint", endpoint)
+      .single();
+
+    if (existing) {
+      // إذا موجود: تحديث فقط
+      const { error } = await supabase
+        .from("push_subscriptions")
+        .update({
+          auth,
+          p256dh,
+          user_agent: user_agent || null,
+          subscribed_at: new Date().toISOString(),
+        })
+        .eq("endpoint", endpoint);
+
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
+
+      console.log("✅ Subscription updated:", endpoint);
+    } else {
+      // إذا ما موجود: إضافة جديد
+      const { error } = await supabase
+        .from("push_subscriptions")
+        .insert({
           endpoint,
           auth,
           p256dh,
           user_agent: user_agent || null,
           subscribed_at: new Date().toISOString(),
-        },
-        { onConflict: "endpoint" }
-      );
+        });
 
-    if (error) {
-      console.error("Supabase upsert error:", error);
-      throw error;
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+
+      console.log("✅ Subscription created:", endpoint);
     }
 
     return NextResponse.json({ success: true });
