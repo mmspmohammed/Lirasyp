@@ -163,6 +163,8 @@ export default function RootLayout({
       <body
         className={`${tajawal.variable} font-sans bg-background text-foreground antialiased`}
       >
+        
+<ServiceWorkerRegistration />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <div className="flex min-h-screen flex-col">
             <Header />
