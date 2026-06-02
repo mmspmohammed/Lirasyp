@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { formatPrice, getChangeUI } from "@/lib/format";
-import { TrendingUp, TrendingDown, Newspaper, Zap, ArrowLeft, Bell } from "lucide-react";
+import { TrendingUp, TrendingDown, Newspaper, Zap, ArrowLeft } from "lucide-react";
 import PriceCardsCarousel from "@/components/PriceCardsCarousel";
+import PushBanner from "@/components/PushBanner";
 
 export const revalidate = 60;
 
@@ -37,7 +38,7 @@ function SectionHeader({ title, href }: { title: string; href: string }) {
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-xl font-bold">{title}</h2>
       <Link href={href} className="text-sm text-primary hover:underline flex items-center gap-1">
-        عرض الكل<ArrowLeft className="w-4 h-4" />
+        عرض الكل<<ArrowLeft className="w-4 h-4" />
       </Link>
     </div>
   );
@@ -88,24 +89,8 @@ export default async function HomePage() {
         <PriceCardsCarousel cards={cards} />
       </section>
 
-      {/* بانر التنبيهات */}
-      <section className="mb-10">
-        <div className="rounded-2xl bg-gradient-to-r from-red-500/10 via-orange-500/10 to-yellow-500/10 border border-red-500/20 p-5 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
-              <Bell className="w-6 h-6 text-red-500" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base">🔔 فعّل التنبيهات لتصلك الإشعارات في لحظة تغيرها</h3>
-             
-            </div>
-          </div>
-          <button className="px-5 py-2.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition shadow-lg shadow-red-500/20 shrink-0">
-            تفعيل الإشعارات
-          </button>
-        </div>
-      </section>
-
+      {/* ✅ بانر الإشعارات الجديد */}
+      <PushBanner />
 
       {/* News Section - بدون نوع الخبر */}
       {data.news.length > 0 && (
