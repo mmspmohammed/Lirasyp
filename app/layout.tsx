@@ -6,6 +6,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Header from "@/components/Header";
 import FloatingActions from "@/components/FloatingActions";
+import SwRegistration from "@/components/ServiceWorker";
 
 const tajawal = Tajawal({
   subsets: ["arabic"],
@@ -99,7 +100,6 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
-        {/* Structured Data - WebSite */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -131,7 +131,6 @@ export default function RootLayout({
           }}
         />
 
-        {/* Structured Data - Organization */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -155,7 +154,6 @@ export default function RootLayout({
           }}
         />
 
-        {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://awvlqxxwktqtlobhvqwh.supabase.co" />
@@ -163,8 +161,7 @@ export default function RootLayout({
       <body
         className={`${tajawal.variable} font-sans bg-background text-foreground antialiased`}
       >
-        
-<ServiceWorkerRegistration />
+        <SwRegistration />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <div className="flex min-h-screen flex-col">
             <Header />
@@ -179,7 +176,31 @@ export default function RootLayout({
                       نقدم بيانات دقيقة ومحدثة من مصادر موثوقة.
                     </p>
                   </div>
-                  
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold">روابط سريعة</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li>
+                        <a href="/prices/currency" className="text-muted-foreground hover:text-primary transition">
+                          💵 أسعار العملات
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/prices/gold" className="text-muted-foreground hover:text-primary transition">
+                          🥇 أسعار الذهب
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/prices/crypto" className="text-muted-foreground hover:text-primary transition">
+                          ₿ العملات الرقمية
+                        </a>
+                      </li>
+                      <li>
+                        <a href="/news" className="text-muted-foreground hover:text-primary transition">
+                          📰 الأخبار الاقتصادية
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
                   <div>
                     <h3 className="mb-3 text-lg font-bold">معلومات</h3>
                     <ul className="space-y-2 text-sm">
@@ -202,9 +223,12 @@ export default function RootLayout({
                   </div>
                 </div>
                 <div className="mt-8 border-t border-border pt-4 text-center text-sm text-muted-foreground">
-  <p>الليرة عملتنا 2025-2026</p>
-  <p className="mt-1">created by E: Mohammed</p>
-</div>
+                  <p>الليرة عملتنا 2025-2026</p>
+                  <p className="mt-1">created by E: Mohammed</p>
+                  <p className="mt-2">
+                    ⚠️ الأسعار للأغراض الإعلامية فقط وقد تختلف عن السوق الفعلي.
+                  </p>
+                </div>
               </div>
             </footer>
           </div>
