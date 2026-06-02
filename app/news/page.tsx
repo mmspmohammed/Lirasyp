@@ -151,7 +151,7 @@ export default async function NewsPage() {
                 key={article.slug}
                 title={article.title_ar}
                 summary={article.summary}
-                category={article.category}
+              
                 date={article.published_at}
                 slug={article.slug}
                 source={article.source_name}
