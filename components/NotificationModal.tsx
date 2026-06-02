@@ -7,7 +7,7 @@ import { Bell, X, Check, BellOff, Loader2 } from "lucide-react";
 interface Props {
   open: boolean;
   onClose: () => void;
-}
+} 
 
 export default function NotificationModal({ open, onClose }: Props) {
   const [status, setStatus] = useState<"idle" | "loading" | "granted" | "denied" | "unsupported">("idle");
