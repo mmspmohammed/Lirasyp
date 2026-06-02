@@ -74,7 +74,8 @@ export default function NotificationModal({ open, onClose }: Props) {
 
       const newSub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey) as ArrayBufferView,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey) as Uint8Array,
+
       });
 
       await saveSubscription(newSub);
