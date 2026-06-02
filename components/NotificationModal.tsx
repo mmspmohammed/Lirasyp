@@ -1,3 +1,4 @@
+// components/NotificationModal.tsx
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
@@ -29,98 +30,58 @@ export default function NotificationModal({ open, onClose }: Props) {
   }, [open, handleKeyDown]);
 
   async function checkStatus() {
-    console.log("🔍 Checking notification support...");
-
-    if (!("Notification" in window)) {
-      console.warn("❌ Notification API not supported");
-      setStatus("unsupported");
-      return;
-    }
-    if (!("serviceWorker" in navigator)) {
-      console.warn("❌ Service Worker not supported");
-      setStatus("unsupported");
-      return;
-    }
-    if (!("PushManager" in window)) {
-      console.warn("❌ PushManager not supported");
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       setStatus("unsupported");
       return;
     }
 
     if (Notification.permission === "denied") {
-      console.warn("❌ Notification permission denied");
       setStatus("denied");
       return;
     }
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      console.log("✅ Service Worker ready:", registration.scope);
-
       const existingSub = await registration.pushManager.getSubscription();
-      console.log("📡 Existing subscription:", existingSub);
-
       if (existingSub) {
         setSubscription(existingSub);
         setStatus("granted");
       } else {
         setStatus("idle");
       }
-    } catch (err) {
-      console.error("❌ Error checking status:", err);
+    } catch {
       setStatus("unsupported");
     }
   }
 
   async function subscribe() {
-    console.log("🚀 Starting subscription...");
     setStatus("loading");
-
     try {
       const permission = await Notification.requestPermission();
-      console.log("🔔 Permission result:", permission);
-
       if (permission !== "granted") {
         setStatus("denied");
         return;
       }
 
       const registration = await navigator.serviceWorker.ready;
-      console.log("✅ SW ready for subscribe");
-
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      console.log("🔑 VAPID Key:", vapidKey ? "exists" : "MISSING!");
 
       if (!vapidKey) {
-        console.error("❌ NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set");
-        alert("مفتاح VAPID غير مُعد — تواصل مع المطور");
+        console.error("VAPID_PUBLIC_KEY not configured");
         setStatus("idle");
         return;
       }
 
-      let applicationServerKey: ArrayBufferView;
-      try {
-        applicationServerKey = urlBase64ToUint8Array(vapidKey) as ArrayBufferView;
-        console.log("🔧 Converted VAPID key to Uint8Array");
-      } catch (convErr) {
-        console.error("❌ Failed to convert VAPID key:", convErr);
-        setStatus("idle");
-        return;
-      }
-
-      console.log("📡 Calling pushManager.subscribe...");
       const newSub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as ArrayBufferView,
       });
-      console.log("✅ Subscribed:", newSub);
 
       await saveSubscription(newSub);
       setSubscription(newSub);
       setStatus("granted");
-    } catch (err: any) {
-      console.error("❌ Subscribe error:", err);
-      alert("فشل الاشتراك: " + (err.message || "خطأ غير معروف"));
+    } catch (err) {
+      console.error("Subscribe error:", err);
       setStatus("idle");
     }
   }
@@ -136,14 +97,13 @@ export default function NotificationModal({ open, onClose }: Props) {
       await deleteSubscription();
       setSubscription(null);
       setStatus("idle");
-    } catch (err: any) {
-      console.error("❌ Unsubscribe error:", err);
+    } catch (err) {
+      console.error("Unsubscribe error:", err);
       setStatus("granted");
     }
   }
 
   async function saveSubscription(sub: PushSubscription) {
-    console.log("💾 Saving subscription...");
     const json = sub.toJSON();
     const res = await fetch("/api/subscribe", {
       method: "POST",
@@ -155,7 +115,6 @@ export default function NotificationModal({ open, onClose }: Props) {
         user_agent: navigator.userAgent,
       }),
     });
-    console.log("💾 Save response:", res.status);
     if (!res.ok) throw new Error("Failed to save subscription");
   }
 
