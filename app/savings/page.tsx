@@ -111,14 +111,13 @@ export default function SavingsPage() {
     fetchRates();
   }, []);
 
-  const getUsdValue = (entry: SavingEntry): number => {
+    const getUsdValue = (entry: SavingEntry): number => {
     if (entry.type === "currency") {
       const rate = rates[entry.asset];
       if (!rate || rate === 0) return 0;
-      // إذا العملة مش USD، نقسم على سعرها بالدولار
-      if (entry.asset === "USD") return entry.amount;
-      if (entry.asset === "SYP") return entry.amount / rate; // rate = SYP per USD
-      return entry.amount / rate; // rate = currency per USD
+      // ✅ rate = USD per 1 unit of currency (e.g., 1 TRY = 0.03 USD)
+      // فلازم نضرب
+      return entry.amount * rate;
     }
 
     if (entry.type === "crypto") {
