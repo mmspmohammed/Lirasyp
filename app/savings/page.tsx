@@ -52,7 +52,8 @@ const OUNCE_TO_GRAM = 31.1035;
 export default function SavingsPage() {
   const [entries, setEntries] = useState<SavingEntry[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [rates, setRates] = useState<Record<string, number>>({});
+  const [rates, setRates] = useState<<Record<string, number>>({});
+  const [sellRates, setSellRates] = useState<<Record<string, number>>({});
   const [goldOunce, setGoldOunce] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -81,7 +82,7 @@ export default function SavingsPage() {
 
         const { data: exchangeData } = await supabase
           .from("exchange_rates")
-          .select("target_currency, buy_price")
+          .select("target_currency, buy_price, sell_price")
           .eq("is_latest", true);
 
         const { data: assetData } = await supabase
@@ -90,10 +91,12 @@ export default function SavingsPage() {
           .eq("is_latest", true);
 
         const mapped: Record<string, number> = {};
+        const sellMapped: Record<string, number> = {};
         mapped["USD"] = 1;
 
         exchangeData?.forEach((item: any) => {
           if (item.buy_price) mapped[item.target_currency] = Number(item.buy_price);
+          if (item.sell_price) sellMapped[item.target_currency] = Number(item.sell_price);
         });
 
         assetData?.forEach((item: any) => {
@@ -101,6 +104,7 @@ export default function SavingsPage() {
         });
 
         setRates(mapped);
+        setSellRates(sellMapped);
         setGoldOunce(mapped["XAU"] || null);
       } catch (err) {
         console.error("Rates fetch error:", err);
@@ -111,13 +115,17 @@ export default function SavingsPage() {
     fetchRates();
   }, []);
 
-    const getUsdValue = (entry: SavingEntry): number => {
+  const getUsdValue = (entry: SavingEntry): number => {
     if (entry.type === "currency") {
+      if (entry.asset === "SYP") {
+        // ✅ سعر البيع للدولار (كم ليرة = 1 دولار)
+        const sellRate = sellRates["SYP"];
+        if (!sellRate || sellRate === 0) return 0;
+        return entry.amount / sellRate; // 1 USD = sellRate SYP
+      }
       const rate = rates[entry.asset];
       if (!rate || rate === 0) return 0;
-      // ✅ rate = USD per 1 unit of currency (e.g., 1 TRY = 0.03 USD)
-      // فلازم نضرب
-      return entry.amount * rate;
+      return entry.amount * rate; // 1 unit = rate USD (معكوس من API)
     }
 
     if (entry.type === "crypto") {
@@ -140,7 +148,7 @@ export default function SavingsPage() {
 
   const totalUsd = useMemo(() => {
     return entries.reduce((sum, entry) => sum + getUsdValue(entry), 0);
-  }, [entries, rates, goldOunce]);
+  }, [entries, rates, sellRates, goldOunce]);
 
   function addEntry(type: AssetType, asset: string, amount: number) {
     const newEntry: SavingEntry = {
@@ -179,14 +187,12 @@ export default function SavingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
         <Link href="/" className="hover:text-primary transition">الرئيسية</Link>
         <ArrowLeft className="w-4 h-4" />
         <span>مدخراتي</span>
       </nav>
 
-      {/* Header */}
       <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-extrabold mb-2 flex items-center gap-2">
@@ -204,7 +210,6 @@ export default function SavingsPage() {
         </button>
       </div>
 
-      {/* Table */}
       <div className="rounded-2xl bg-card border border-border overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -267,7 +272,6 @@ export default function SavingsPage() {
         </div>
       </div>
 
-      {/* Total */}
       <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20 p-6 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -285,13 +289,10 @@ export default function SavingsPage() {
         </div>
       </div>
 
-      {/* Add Modal */}
       {showAdd && <AddModal onAdd={addEntry} onClose={() => setShowAdd(false)} ratesLoaded={!loading} />}
     </div>
   );
 }
-
-// ==================== Modal ====================
 
 function AddModal({
   onAdd,
@@ -302,7 +303,7 @@ function AddModal({
   onClose: () => void;
   ratesLoaded: boolean;
 }) {
-  const [tab, setTab] = useState<"currency" | "crypto" | "gold">("currency");
+  const [tab, setTab] = useState<<"currency" | "crypto" | "gold">("currency");
   const [asset, setAsset] = useState("");
   const [amount, setAmount] = useState("");
 
@@ -320,7 +321,6 @@ function AddModal({
 
   const getUnit = () => {
     if (tab === "gold") return "غرام";
-    if (tab === "currency") return "";
     return "";
   };
 
@@ -348,7 +348,6 @@ function AddModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
-          {/* Tabs */}
           <div className="grid grid-cols-3 gap-2">
             {tabs.map((t) => (
               <button
@@ -365,7 +364,6 @@ function AddModal({
             ))}
           </div>
 
-          {/* Asset Select */}
           <div>
             <label className="block text-sm font-medium mb-2">الأصل</label>
             <select
@@ -383,7 +381,6 @@ function AddModal({
             </select>
           </div>
 
-          {/* Amount */}
           <div>
             <label className="block text-sm font-medium mb-2">
               الكمية {getUnit() && `(${getUnit()})`}
