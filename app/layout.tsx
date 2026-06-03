@@ -176,31 +176,7 @@ export default function RootLayout({
                       نقدم بيانات دقيقة ومحدثة من مصادر موثوقة.
                     </p>
                   </div>
-                  <div>
-                    <h3 className="mb-3 text-lg font-bold">روابط سريعة</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li>
-                        <a href="/prices/currency" className="text-muted-foreground hover:text-primary transition">
-                          💵 أسعار العملات
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/prices/gold" className="text-muted-foreground hover:text-primary transition">
-                          🥇 أسعار الذهب
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/prices/crypto" className="text-muted-foreground hover:text-primary transition">
-                          ₿ العملات الرقمية
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/news" className="text-muted-foreground hover:text-primary transition">
-                          📰 الأخبار الاقتصادية
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
+                  
                   <div>
                     <h3 className="mb-3 text-lg font-bold">معلومات</h3>
                     <ul className="space-y-2 text-sm">
@@ -223,11 +199,8 @@ export default function RootLayout({
                   </div>
                 </div>
                 <div className="mt-8 border-t border-border pt-4 text-center text-sm text-muted-foreground">
-                  <p>الليرة عملتنا 2025-2026</p>
-                  <p className="mt-1">created by E: Mohammed</p>
-                  <p className="mt-2">
-                    ⚠️ الأسعار للأغراض الإعلامية فقط وقد تختلف عن السوق الفعلي.
-                  </p>
+                  <p>الليرة عملتنا 2025-2026 created by E: Mohammed</p>
+                 
                 </div>
               </div>
             </footer>
