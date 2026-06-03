@@ -52,8 +52,8 @@ const OUNCE_TO_GRAM = 31.1035;
 export default function SavingsPage() {
   const [entries, setEntries] = useState<SavingEntry[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [rates, setRates] = useState<<Record<string, number>>({});
-  const [sellRates, setSellRates] = useState<<Record<string, number>>({});
+  const [rates, setRates] = useState<Record<string, number>>({});
+  const [sellRates, setSellRates] = useState<Record<string, number>>({});
   const [goldOunce, setGoldOunce] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
