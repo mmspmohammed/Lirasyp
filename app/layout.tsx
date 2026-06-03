@@ -170,7 +170,7 @@ export default function RootLayout({
               <div className="container mx-auto px-4">
                 <div className="grid gap-8 md:grid-cols-3">
                   <div>
-                    <h3 className="mb-3 text-lg font-bold">LiraSYP</h3>
+                    <h3 className="mb-3 text-lg font-bold">الليرة عملتنا</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       منصة متخصصة في تتبع أسعار الصرف والذهب والعملات الرقمية في سوريا.
                       نقدم بيانات دقيقة ومحدثة من مصادر موثوقة.
