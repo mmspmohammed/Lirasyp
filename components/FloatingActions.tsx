@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -12,7 +11,7 @@ export default function FloatingActions() {
 
   return (
     <>
-      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2">
+      <div className="fixed bottom-4 left-4 z-50 flex flex-col items-center gap-2">
         <button
           onClick={() => setCalcOpen(true)}
           className="h-14 w-14 rounded-full bg-primary text-white shadow-2xl flex items-center justify-center transition hover:scale-110 active:scale-95"
