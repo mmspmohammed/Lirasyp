@@ -25,9 +25,7 @@ export default function PushBanner() {
                 ? "🔔 الإشعارات مفعلة"
                 : "🔔 فعّل التنبيهات لتصلك الإشعارات في لحظة تغيرها"}
             </h3>
-            <p className="text-sm text-muted-foreground">
-              احصل على إشعارات فورية عند تغير أسعار الدولار، الذهب، والعملات الرقمية.
-            </p>
+            
           </div>
         </div>
         <button
