@@ -14,16 +14,17 @@ export default function FloatingActions() {
 
   const showLabel = useCallback((text: string) => {
     setActiveLabel(text);
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setActiveLabel((curr) => (curr === text ? null : curr));
     }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <>
-      <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-3">
+      <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-3">
         {/* الحاسبة */}
-        <div className="flex items-center gap-3 group">
+        <div className="relative group">
           <button
             onClick={() => setCalcOpen(true)}
             onMouseEnter={() => showLabel("الحاسبة")}
@@ -33,7 +34,7 @@ export default function FloatingActions() {
             <Calculator className="h-6 w-6" />
           </button>
           <span
-            className={`px-3 py-1.5 rounded-lg bg-card border border-border shadow-md text-sm font-medium whitespace-nowrap transition-all duration-300 pointer-events-none ${
+            className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-lg bg-card/95 backdrop-blur border border-border shadow-lg text-sm font-medium whitespace-nowrap transition-all duration-300 pointer-events-none ${
               activeLabel === "الحاسبة"
                 ? "opacity-100 translate-x-0"
                 : "opacity-0 -translate-x-2"
@@ -44,7 +45,7 @@ export default function FloatingActions() {
         </div>
 
         {/* الإشعارات */}
-        <div className="flex items-center gap-3 group">
+        <div className="relative group">
           <button
             onClick={() => setNotifOpen(true)}
             onMouseEnter={() => showLabel("الإشعارات")}
@@ -54,7 +55,7 @@ export default function FloatingActions() {
             <Bell className="h-6 w-6" />
           </button>
           <span
-            className={`px-3 py-1.5 rounded-lg bg-card border border-border shadow-md text-sm font-medium whitespace-nowrap transition-all duration-300 pointer-events-none ${
+            className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-lg bg-card/95 backdrop-blur border border-border shadow-lg text-sm font-medium whitespace-nowrap transition-all duration-300 pointer-events-none ${
               activeLabel === "الإشعارات"
                 ? "opacity-100 translate-x-0"
                 : "opacity-0 -translate-x-2"
@@ -64,8 +65,8 @@ export default function FloatingActions() {
           </span>
         </div>
 
-        {/* المدخرات / الحافظة */}
-        <div className="flex items-center gap-3 group">
+        {/* المدخرات */}
+        <div className="relative group">
           <Link
             href="/savings"
             onMouseEnter={() => showLabel("مدخراتي")}
@@ -75,7 +76,7 @@ export default function FloatingActions() {
             <Wallet className="h-6 w-6" />
           </Link>
           <span
-            className={`px-3 py-1.5 rounded-lg bg-card border border-border shadow-md text-sm font-medium whitespace-nowrap transition-all duration-300 pointer-events-none ${
+            className={`absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3 py-1.5 rounded-lg bg-card/95 backdrop-blur border border-border shadow-lg text-sm font-medium whitespace-nowrap transition-all duration-300 pointer-events-none ${
               activeLabel === "مدخراتي"
                 ? "opacity-100 translate-x-0"
                 : "opacity-0 -translate-x-2"
