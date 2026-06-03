@@ -303,7 +303,7 @@ function AddModal({
   onClose: () => void;
   ratesLoaded: boolean;
 }) {
-  const [tab, setTab] = useState<<"currency" | "crypto" | "gold">("currency");
+  const [tab, setTab] = useState<"currency" | "crypto" | "gold">("currency");
   const [asset, setAsset] = useState("");
   const [amount, setAmount] = useState("");
 
