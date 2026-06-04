@@ -76,12 +76,7 @@ export default function AboutPage() {
           <div className="text-sm space-y-2 text-muted-foreground">
             <p>نعتمد على مصادر متعددة لضمان الدقة:</p>
             <ul className="list-disc list-inside space-y-1 mr-4">
-              <li>أسعار الصرف: LiraNews.info (تحديث كل ساعة)</li>
-              <li>الذهب العالمي: Gold-API.com (تحديث كل 15 دقيقة)</li>
-              <li>العملات العالمية: ExchangeRate-API (تحديث كل ساعة)</li>
-              <li>العملات الرقمية: CoinGecko (تحديث كل 10 دقائق)</li>
-              <li>الأخبار: سانا الاقتصادي، الوطن أونلاين (تحديث كل 30 دقيقة)</li>
-              <li>المحروقات والكهرباء: إدخال يدوي من قبل الفريق بناءً على القرارات الرسمية</li>
+       
             </ul>
           </div>
         </div>
