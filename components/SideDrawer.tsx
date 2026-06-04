@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Sun, Moon, BellOff, Home, DollarSign, Gem, Coins, Bitcoin, Fuel, Zap, Newspaper, Info, Shield, FileText } from 'lucide-react';
+import { X, Sun, Moon, BellOff, Home, DollarSign, Gem, Coins, Bitcoin, Fuel, Zap, Newspaper, Info, Shield, FileText, Wallet, Calculator } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ const menuItems = [
   { href: '/prices/fuel', label: 'المحروقات', icon: Fuel },
   { href: '/prices/electricity', label: 'الكهرباء', icon: Zap },
   { href: '/news', label: 'الأخبار', icon: Newspaper },
+  { href: '/savings', label: 'محفظتي', icon: Wallet },
   { href: '/about', label: 'عن الموقع', icon: Info },
   { href: '/privacy', label: 'سياسة الخصوصية', icon: Shield },
   { href: '/terms', label: 'شروط الاستخدام', icon: FileText },
@@ -43,11 +44,17 @@ export default function SideDrawer({ open, onClose }: SideDrawerProps) {
       if (subscription) {
         await subscription.unsubscribe();
         setPushEnabled(false);
-        // 🗄️ حذف الاشتراك من قاعدة البيانات (اختياري)
-        // await fetch('/api/unsubscribe', { method: 'POST' });
       }
     }
   };
+
+  // ✅ فتح الحاسبة من القائمة الجانبية
+  const openCalculator = () => {
+    onClose();
+    // بيفتح event مخصص للحاسبة (FloatingActions بيسمعه)
+    window.dispatchEvent(new CustomEvent('open-calculator'));
+  };
+
   return (
     <>
       {/* خلفية معتمة عند فتح القائمة */}
@@ -81,7 +88,7 @@ export default function SideDrawer({ open, onClose }: SideDrawerProps) {
         </div>
 
         {/* عناصر التنقل */}
-        <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-180px)]">
+        <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-240px)]">
           {menuItems.map((item) => (
             <Link
               key={item.href}
@@ -93,6 +100,15 @@ export default function SideDrawer({ open, onClose }: SideDrawerProps) {
               <span className="text-sm font-medium">{item.label}</span>
             </Link>
           ))}
+
+          {/* ✅ الحاسبة الذكية (مودال) */}
+          <button
+            onClick={openCalculator}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition group text-right"
+          >
+            <Calculator className="h-5 w-5 text-muted-foreground group-hover:text-primary transition" />
+            <span className="text-sm font-medium">الحاسبة الذكية</span>
+          </button>
         </nav>
 
         {/* أدوات أسفل القائمة */}
