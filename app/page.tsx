@@ -1,67 +1,300 @@
 // app/page.tsx
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { createServerSupabase } from "@/lib/supabase-server";
-import { formatPrice } from "@/lib/format";
- import { Zap, ArrowLeft, DollarSign, Coins, Bitcoin } from "lucide-react";
-import AnimatedHeroCards from "@/components/AnimatedHeroCards";
-import LiveTickerBar from "@/components/LiveTickerBar";
-import SparklineChart from "@/components/SparklineChart";
-import ScrollReveal from "@/components/ScrollReveal";
+import { createClient } from "@/lib/supabase";
+import { formatPrice, getChangeUI } from "@/lib/format";
+import { TrendingUp, TrendingDown, Newspaper, Zap, ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
+import PriceCardsCarousel from "@/components/PriceCardsCarousel";
 import PushBanner from "@/components/PushBanner";
 
-export const revalidate = 60;
+interface HomeData {
+  usdSyp: any;
+  gold: any;
+  btc: any;
+  currencies: any[];
+  news: any[];
+}
 
-export const metadata = {
-  title: "الرئيسية | الليرة عملتنا",
-  description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية في سوريا.",
-  openGraph: {
-    title: "الليرة عملتنا | أسعار الصرف والذهب في سوريا",
-    description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
-  },
-};
+export default function HomePage() {
+  const [data, setData] = useState<<HomeData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-// ─── مكونات فرعية ────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    try {
+      setIsRefreshing(true);
+      const supabase = createClient();
 
-function NewsCard({
-  title,
-  summary,
-  date,
-  slug,
-  category,
-}: {
-  title: string;
-  summary: string;
-  date: string;
-  slug: string;
-  category?: string;
-}) {
+      const { data: usdSyp } = await supabase
+        .from("exchange_rates")
+        .select("buy_price, sell_price, change_24h")
+        .eq("base_currency", "USD")
+        .eq("target_currency", "SYP")
+        .eq("is_latest", true)
+        .order("fetched_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      const { data: gold } = await supabase
+        .from("asset_prices")
+        .select("price_usd, change_24h")
+        .eq("asset_type", "gold_ounce")
+        .eq("asset_code", "XAU")
+        .eq("is_latest", true)
+        .order("fetched_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      const { data: btc } = await supabase
+        .from("asset_prices")
+        .select("price_usd, change_24h")
+        .eq("asset_type", "crypto")
+        .eq("asset_code", "BTC")
+        .eq("is_latest", true)
+        .order("fetched_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      const { data: currencies } = await supabase
+        .from("exchange_rates")
+        .select("target_currency, buy_price, change_24h")
+        .eq("base_currency", "USD")
+        .neq("target_currency", "SYP")
+        .eq("is_latest", true)
+        .order("fetched_at", { ascending: false })
+        .limit(6);
+
+      const { data: news } = await supabase
+        .from("news_articles")
+        .select("title_ar, slug, summary, category, published_at")
+        .order("published_at", { ascending: false })
+        .limit(4);
+
+      setData({
+        usdSyp,
+        gold,
+        btc,
+        currencies: currencies || [],
+        news: news || [],
+      });
+      setLastUpdate(new Date());
+      setError(null);
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      setError("تعذر تحميل البيانات");
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  // ✅ جلب أولي
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // ✅ تحديث تلقائي كل 30 ثانية
+  useEffect(() => {
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  // ✅ Real-time subscription
+  useEffect(() => {
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel("homepage-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "exchange_rates", filter: "is_latest=eq.true" },
+        () => fetchData()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "asset_prices", filter: "is_latest=eq.true" },
+        () => fetchData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
+
+  const cards = data
+    ? [
+        {
+          title: "الدولار / ليرة",
+          price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
+          change: data.usdSyp?.change_24h?.toString() || "0",
+          unit: "ل.س",
+          href: "/prices/currency",
+          color: "primary",
+        },
+        {
+          title: "الذهب (أونصة)",
+          price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
+          change: data.gold?.change_24h?.toString() || "0",
+          unit: "دولار",
+          href: "/prices/gold",
+          color: "yellow",
+        },
+        {
+          title: "البيتكوين",
+          price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
+          change: data.btc?.change_24h?.toString() || "0",
+          unit: "دولار",
+          href: "/prices/crypto",
+          color: "orange",
+        },
+      ]
+    : [];
+
+  if (loading && !data) {
+    return <HomeSkeleton />;
+  }
+
   return (
-    <Link href={`/news/${slug}`} className="group block h-full">
-      <article className="relative rounded-xl bg-card p-5 border border-border h-full transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1 overflow-hidden">
-        {/* شريط فئة لوني */}
-        {category && (
-          <span className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-        )}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {date}
-          </span>
-          {category && (
-            <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-              {category}
-            </span>
+    <div className="container mx-auto px-4 py-8">
+      {/* Header with refresh */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">الرئيسية</h1>
+          {lastUpdate && (
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <RefreshCw className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`} />
+              آخر تحديث: {lastUpdate.toLocaleTimeString("ar-SY")}
+            </p>
           )}
         </div>
-        <h3 className="font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2 text-base">
-          {title}
-        </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-          {summary}
-        </p>
-        <div className="mt-3 flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-          اقرأ المزيد
-          <ArrowLeft className="w-3 h-3" />
+        <button
+          onClick={fetchData}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover:border-primary transition text-sm disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          تحديث
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 mb-6 text-center">
+          <p className="text-red-500 text-sm">{error}</p>
+          <button onClick={fetchData} className="mt-2 text-sm text-red-500 underline">
+            إعادة المحاولة
+          </button>
         </div>
+      )}
+
+      {/* Price Cards */}
+      <section className="mb-10">
+        <PriceCardsCarousel cards={cards} />
+      </section>
+
+      {/* Push Banner */}
+      <PushBanner />
+
+      {/* Currencies Table */}
+      {data?.currencies && data.currencies.length > 0 && (
+        <section className="mb-12">
+          <SectionHeader title="العملات العالمية" href="/prices/currency" />
+          <div className="rounded-2xl bg-card border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-right text-sm font-medium">العملة</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium">السعر (USD)</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium">التغير 24h</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {data.currencies.map((c: any) => {
+                    const change = parseFloat(c.change_24h) || 0;
+                    const { color } = getChangeUI(change);
+                    return (
+                      <tr key={c.target_currency} className="hover:bg-muted/30 transition">
+                        <td className="px-4 py-3 font-medium">{c.target_currency}</td>
+                        <td className="px-4 py-3">{formatPrice(c.buy_price, "USD")}</td>
+                        <td className={`px-4 py-3 ${color}`}>
+                          <span className="flex items-center gap-1">
+                            {change > 0 ? "+" : ""}
+                            {change.toFixed(2)}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* News Section */}
+      {data?.news && data.news.length > 0 && (
+        <section className="mb-12">
+          <SectionHeader title="آخر الأخبار الاقتصادية" href="/news" />
+          <div className="grid gap-4 md:grid-cols-2">
+            {data.news.map((article: any) => (
+              <NewsCard
+                key={article.slug}
+                title={article.title_ar}
+                summary={article.summary}
+                date={new Date(article.published_at).toLocaleDateString("ar-SY")}
+                slug={article.slug}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Quick Links */}
+      <section>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <Zap className="w-6 h-6 text-primary" />
+          تصفح سريع
+        </h2>
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+          {[
+            { href: "/prices/fuel", icon: "⛽", title: "المحروقات", desc: "بنزين ومازوت وغاز" },
+            { href: "/prices/electricity", icon: "⚡", title: "الكهرباء", desc: "شرائح الاستهلاك" },
+            { href: "/news", icon: "📰", title: "الأخبار", desc: "اقتصادية وسورية" },
+            { href: "/savings", icon: "💰", title: "مدخراتي", desc: "محفظتك الشخصية" },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="rounded-xl bg-card p-4 border border-border text-center hover:border-primary/30 hover:shadow-md transition"
+            >
+              <span className="text-3xl block mb-2">{link.icon}</span>
+              <h3 className="font-bold">{link.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{link.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ==================== Components ====================
+
+function NewsCard({ title, summary, date, slug }: { title: string; summary: string; date: string; slug: string }) {
+  return (
+    <Link href={`/news/${slug}`} className="group block">
+      <article className="rounded-xl bg-card p-4 border border-border transition-all hover:shadow-md hover:border-primary/20">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs text-muted-foreground">{date}</span>
+        </div>
+        <h3 className="font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2">{title}</h3>
+        <p className="text-sm text-muted-foreground line-clamp-2">{summary}</p>
       </article>
     </Link>
   );
@@ -69,15 +302,9 @@ function NewsCard({
 
 function SectionHeader({ title, href }: { title: string; href: string }) {
   return (
-    <div className="flex items-center justify-between mb-5">
-      <h2 className="text-xl font-bold flex items-center gap-2">
-        <span className="w-1.5 h-6 bg-primary rounded-full inline-block" />
-        {title}
-      </h2>
-      <Link
-        href={href}
-        className="text-sm text-primary hover:underline flex items-center gap-1 font-medium transition-colors"
-      >
+    <div className="flex items-center justify-between mb-4">
+      <h2 className="text-xl font-bold">{title}</h2>
+      <Link href={href} className="text-sm text-primary hover:underline flex items-center gap-1">
         عرض الكل
         <ArrowLeft className="w-4 h-4" />
       </Link>
@@ -85,322 +312,37 @@ function SectionHeader({ title, href }: { title: string; href: string }) {
   );
 }
 
-function QuickLinkCard({
-  href,
-  icon,
-  title,
-  desc,
-}: {
-  href: string;
-  icon: string;
-  title: string;
-  desc: string;
-}) {
+// ==================== Skeleton Loading ====================
+
+function HomeSkeleton() {
   return (
-    <Link
-      href={href}
-      className="group rounded-xl bg-card p-5 border border-border text-center transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 hover:bg-primary/5"
-    >
-      <span className="text-4xl block mb-3 transition-transform duration-300 group-hover:scale-110 inline-block">
-        {icon}
-      </span>
-      <h3 className="font-bold mb-1">{title}</h3>
-      <p className="text-xs text-muted-foreground">{desc}</p>
-    </Link>
-  );
-}
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <div className="h-8 w-32 bg-muted rounded-lg animate-pulse" />
+        <div className="h-10 w-24 bg-muted rounded-full animate-pulse" />
+      </div>
 
-// ─── جلب البيانات الرئيسية + بيانات الرسوم البيانية ─────
+      {/* Cards Skeleton */}
+      <div className="grid gap-4 md:grid-cols-3 mb-10">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-2xl bg-card p-5 border border-border animate-pulse">
+            <div className="h-6 w-24 bg-muted rounded mb-4" />
+            <div className="h-12 w-32 bg-muted rounded mb-3" />
+            <div className="h-4 w-20 bg-muted rounded" />
+          </div>
+        ))}
+      </div>
 
-async function getHomeData() {
-  const supabase = createServerSupabase();
-
-  // البيانات الرئيسية – متوازية
-  const [
-    { data: usdSyp },
-    { data: gold },
-    { data: btc },
-    { data: currencies },
-    { data: news },
-    // بيانات الرسوم البيانية المصغرة
-    { data: usdSparkline },
-    { data: goldSparkline },
-    { data: btcSparkline },
-  ] = await Promise.all([
-    supabase
-      .from("exchange_rates")
-      .select("buy_price, sell_price, change_24h")
-      .eq("base_currency", "USD")
-      .eq("target_currency", "SYP")
-      .eq("is_latest", true)
-      .order("fetched_at", { ascending: false })
-      .limit(1)
-      .single(),
-    supabase
-      .from("asset_prices")
-      .select("price_usd, change_24h")
-      .eq("asset_type", "gold_ounce")
-      .eq("asset_code", "XAU")
-      .eq("is_latest", true)
-      .order("fetched_at", { ascending: false })
-      .limit(1)
-      .single(),
-    supabase
-      .from("asset_prices")
-      .select("price_usd, change_24h")
-      .eq("asset_type", "crypto")
-      .eq("asset_code", "BTC")
-      .eq("is_latest", true)
-      .order("fetched_at", { ascending: false })
-      .limit(1)
-      .single(),
-    supabase
-      .from("exchange_rates")
-      .select("target_currency, buy_price, change_24h")
-      .eq("base_currency", "USD")
-      .neq("target_currency", "SYP")
-      .eq("is_latest", true)
-      .order("fetched_at", { ascending: false })
-      .limit(6),
-    supabase
-      .from("news_articles")
-      .select("title_ar, slug, summary, category, published_at")
-      .order("published_at", { ascending: false })
-      .limit(4),
-    // USD/SYP sparkline – آخر 30 نقطة
-    supabase
-      .from("exchange_rates")
-      .select("sell_price")
-      .eq("base_currency", "USD")
-      .eq("target_currency", "SYP")
-      .order("fetched_at", { ascending: false })
-      .limit(30),
-    // Gold sparkline – آخر 30 نقطة
-    supabase
-      .from("asset_prices")
-      .select("price_usd")
-      .eq("asset_type", "gold_ounce")
-      .eq("asset_code", "XAU")
-      .order("fetched_at", { ascending: false })
-      .limit(30),
-    // BTC sparkline – آخر 30 نقطة
-    supabase
-      .from("asset_prices")
-      .select("price_usd")
-      .eq("asset_type", "crypto")
-      .eq("asset_code", "BTC")
-      .order("fetched_at", { ascending: false })
-      .limit(30),
-  ]);
-
-  // عكس ترتيب بيانات sparkline لتصبح زمنياً من الأقدم للأحدث
-  const reversePrices = (arr: any[] | null) =>
-    arr ? arr.reverse().map((r: any) => r.sell_price ?? r.price_usd ?? 0) : [];
-
-  return {
-    usdSyp,
-    gold,
-    btc,
-    currencies: currencies || [],
-    news: news || [],
-    usdSparklineData: reversePrices(usdSparkline),
-    goldSparklineData: reversePrices(goldSparkline),
-    btcSparklineData: reversePrices(btcSparkline),
-  };
-}
-
-// ─── الصفحة الرئيسية ─────────────────────────────────────
-
-export default async function HomePage() {
-  const data = await getHomeData();
-
-  // بيانات البطاقات الرئيسية
-  const heroCards = [
-    {
-      title: "الدولار / ليرة",
-      formattedPrice: data.usdSyp
-        ? formatPrice(data.usdSyp.sell_price, "SYP")
-        : "—",
-      rawPrice: data.usdSyp?.sell_price ?? 0,
-      change: Number(data.usdSyp?.change_24h) || 0,
-      unit: "ل.س",
-      href: "/prices/currency",
-      color: "primary" as const,
-      sparklineData: data.usdSparklineData,
-      icon: <DollarSign className="w-6 h-6" />,
-      changeLabel: data.usdSyp?.change_24h
-        ? `${Number(data.usdSyp.change_24h) >= 0 ? "+" : ""}${Number(data.usdSyp.change_24h).toFixed(2)}%`
-        : "0%",
-    },
-    {
-      title: "الذهب (أونصة)",
-      formattedPrice: data.gold
-        ? formatPrice(data.gold.price_usd, "USD")
-        : "—",
-      rawPrice: data.gold?.price_usd ?? 0,
-      change: Number(data.gold?.change_24h) || 0,
-      unit: "دولار",
-      href: "/prices/gold",
-      color: "yellow" as const,
-      sparklineData: data.goldSparklineData,
-      icon: <Coins className="w-6 h-6" />,
-      changeLabel: data.gold?.change_24h
-        ? `${Number(data.gold.change_24h) >= 0 ? "+" : ""}${Number(data.gold.change_24h).toFixed(2)}%`
-        : "0%",
-    },
-    {
-      title: "البيتكوين",
-      formattedPrice: data.btc
-        ? formatPrice(data.btc.price_usd, "USD")
-        : "—",
-      rawPrice: data.btc?.price_usd ?? 0,
-      change: Number(data.btc?.change_24h) || 0,
-      unit: "دولار",
-      href: "/prices/crypto",
-      color: "orange" as const,
-      sparklineData: data.btcSparklineData,
-      icon: <Bitcoin className="w-6 h-6" />,
-      changeLabel: data.btc?.change_24h
-        ? `${Number(data.btc.change_24h) >= 0 ? "+" : ""}${Number(data.btc.change_24h).toFixed(2)}%`
-        : "0%",
-    },
-  ];
-
-  // بيانات الشريط المتحرك
-  const tickerItems = [
-    {
-      label: "دولار/ليرة",
-      buy: data.usdSyp?.buy_price ?? 0,
-      sell: data.usdSyp?.sell_price ?? 0,
-      change: Number(data.usdSyp?.change_24h) || 0,
-      unit: "ل.س",
-    },
-    {
-      label: "ذهب",
-      price: data.gold?.price_usd ?? 0,
-      change: Number(data.gold?.change_24h) || 0,
-      unit: "$",
-    },
-    {
-      label: "بيتكوين",
-      price: data.btc?.price_usd ?? 0,
-      change: Number(data.btc?.change_24h) || 0,
-      unit: "$",
-    },
-    ...(data.currencies || []).map((c: any) => ({
-      label: `USD/${c.target_currency}`,
-      buy: c.buy_price,
-      sell: c.buy_price,
-      change: Number(c.change_24h) || 0,
-      unit: c.target_currency,
-    })),
-  ];
-
-  const quickLinks = [
-    { href: "/prices/fuel", icon: "⛽", title: "المحروقات", desc: "بنزين ومازوت وغاز" },
-    { href: "/prices/electricity", icon: "⚡", title: "الكهرباء", desc: "شرائح الاستهلاك" },
-    { href: "/news", icon: "📰", title: "الأخبار", desc: "اقتصادية وسورية" },
-    { href: "/about", icon: "ℹ️", title: "عن الموقع", desc: "من نحن" },
-  ];
-
-  return (
-    <div className="min-h-screen">
-      {/* شريط الأسعار المتحرك */}
-      <LiveTickerBar items={tickerItems} />
-
-      <div className="container mx-auto px-4 py-6">
-        {/* البطاقات الرئيسية التفاعلية مع رسوم بيانية مصغرة */}
-        <ScrollReveal>
-          <section className="mb-8">
-            <AnimatedHeroCards cards={heroCards} />
-          </section>
-        </ScrollReveal>
-
-        {/* بانر الإشعارات */}
-        <ScrollReveal>
-          <PushBanner />
-        </ScrollReveal>
-
-        {/* العملات الأخرى */}
-        {data.currencies.length > 0 && (
-          <ScrollReveal>
-            <section className="mb-10 mt-10">
-              <SectionHeader title="أسعار العملات الأخرى" href="/prices/currency" />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {data.currencies.map((c: any) => {
-                  const change = Number(c.change_24h) || 0;
-                  const isUp = change >= 0;
-                  return (
-                    <Link
-                      key={c.target_currency}
-                      href={`/prices/currency#${c.target_currency.toLowerCase()}`}
-                      className="flex items-center justify-between rounded-xl bg-card p-4 border border-border transition-all hover:border-primary/20 hover:shadow-md hover:bg-primary/5 group"
-                    >
-                      <div>
-                        <span className="font-bold text-sm">USD/{c.target_currency}</span>
-                        <p className="text-lg font-mono mt-1">
-                          {formatPrice(c.buy_price, c.target_currency)}
-                        </p>
-                      </div>
-                      <div
-                        className={`flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-full ${
-                          isUp
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        }`}
-                      >
-                        <span className="text-base">{isUp ? "↑" : "↓"}</span>
-                        {Math.abs(change).toFixed(2)}%
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          </ScrollReveal>
-        )}
-
-        {/* آخر الأخبار */}
-        {data.news.length > 0 && (
-          <ScrollReveal>
-            <section className="mb-10">
-              <SectionHeader title="آخر الأخبار الاقتصادية" href="/news" />
-              <div className="grid gap-4 sm:grid-cols-2">
-                {data.news.map((article: any) => (
-                  <NewsCard
-                    key={article.slug}
-                    title={article.title_ar}
-                    summary={article.summary}
-                    date={new Date(article.published_at).toLocaleDateString("ar-SY", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                    slug={article.slug}
-                    category={article.category}
-                  />
-                ))}
-              </div>
-            </section>
-          </ScrollReveal>
-        )}
-
-        {/* تصفح سريع */}
-        <ScrollReveal>
-          <section>
-            <h2 className="text-xl font-bold mb-5 flex items-center gap-2">
-              <Zap className="w-6 h-6 text-primary" />
-              تصفح سريع
-            </h2>
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-              {quickLinks.map((link) => (
-                <QuickLinkCard key={link.href} {...link} />
-              ))}
-            </div>
-          </section>
-        </ScrollReveal>
+      {/* Table Skeleton */}
+      <div className="rounded-2xl bg-card border border-border overflow-hidden mb-12">
+        <div className="h-12 bg-muted/50 animate-pulse" />
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-14 border-b border-border animate-pulse flex items-center px-4">
+            <div className="h-4 w-20 bg-muted rounded" />
+          </div>
+        ))}
       </div>
     </div>
   );
-      }
+         }
+       
