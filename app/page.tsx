@@ -278,7 +278,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Coins className="w-5 h-5 text-primary" />
-            أسعار العملات 
+            أسعار العملات العالمية
           </h2>
           <Link href="/prices/currency" className="text-sm text-primary hover:underline flex items-center gap-1">
             عرض الكل <ArrowLeft className="w-4 h-4" />
@@ -313,7 +313,7 @@ export default function HomePage() {
                 <tbody className="divide-y divide-border">
                   {data.currencies.map((c: any, idx: number) => {
                     const change = parseFloat(c.change_24h) || 0;
-                    const { color, Icon: changeIcon } = getChangeUI(change);
+                    const { color, icon: changeIcon } = getChangeUI(change, true);
                     return (
                       <tr key={c.target_currency} className="hover:bg-muted/30 transition-all duration-200 group">
                         <td className="px-5 py-3 font-medium">
@@ -366,6 +366,37 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* Quick Links Grid */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Zap className="w-5 h-5 text-primary" />
+          خدمات سريعة
+        </h2>
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+          {[
+            { href: "/prices/fuel", icon: "⛽", title: "المحروقات", desc: "بنزين ومازوت وغاز", color: "from-slate-500/20 to-gray-500/20" },
+            { href: "/prices/electricity", icon: "⚡", title: "الكهرباء", desc: "شرائح الاستهلاك", color: "from-yellow-500/20 to-amber-500/20" },
+            { href: "/news", icon: "📰", title: "الأخبار", desc: "اقتصادية وسورية", color: "from-blue-500/20 to-cyan-500/20" },
+            { href: "/savings", icon: "💰", title: "مدخراتي", desc: "محفظتك الشخصية", color: "from-green-500/20 to-emerald-500/20" },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="group rounded-2xl bg-gradient-to-br p-[1px] transition-all duration-300 hover:scale-105"
+              style={{ background: `linear-gradient(135deg, var(--primary), transparent)` }}
+            >
+              <div className="relative rounded-2xl bg-card p-5 text-center backdrop-blur-sm transition-all">
+                <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform duration-300">{link.icon}</span>
+                <h3 className="font-bold text-base">{link.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{link.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
 
 // ==================== Enhanced News Card ====================
 function NewsCard({ title, summary, date, slug, index }: { title: string; summary: string; date: string; slug: string; index: number }) {
