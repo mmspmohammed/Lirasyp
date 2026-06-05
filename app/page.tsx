@@ -138,42 +138,40 @@ export default function HomePage() {
   }, [fetchData]);
 
   const cards = data
-  ? [
-      {
-        title: "الدولار / ليرة",
-        price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
-        change: data.usdSyp?.change_24h?.toString() || "0",
-        unit: "ل.س",
-        href: "/prices/currency",
-        icon: DollarSign,
-        gradient: "from-blue-500/20 to-cyan-500/20",
-        borderColor: "border-blue-500/30",
-        color: "primary", // ✅ تمت الإضافة
-      },
-      {
-        title: "الذهب (أونصة)",
-        price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
-        change: data.gold?.change_24h?.toString() || "0",
-        unit: "دولار",
-        href: "/prices/gold",
-        icon: Gem,
-        gradient: "from-yellow-500/20 to-amber-500/20",
-        borderColor: "border-yellow-500/30",
-        color: "yellow", // ✅ تمت الإضافة
-      },
-      {
-        title: "البيتكوين",
-        price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
-        change: data.btc?.change_24h?.toString() || "0",
-        unit: "دولار",
-        href: "/prices/crypto",
-        icon: Bitcoin,
-        gradient: "from-orange-500/20 to-red-500/20",
-        borderColor: "border-orange-500/30",
-        color: "orange", // ✅ تمت الإضافة
-      },
-    ]
-  : [];
+    ? [
+        {
+          title: "الدولار / ليرة",
+          price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
+          change: data.usdSyp?.change_24h?.toString() || "0",
+          unit: "ل.س",
+          href: "/prices/currency",
+          icon: DollarSign,
+          gradient: "from-blue-500/20 to-cyan-500/20",
+          borderColor: "border-blue-500/30",
+        },
+        {
+          title: "الذهب (أونصة)",
+          price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
+          change: data.gold?.change_24h?.toString() || "0",
+          unit: "دولار",
+          href: "/prices/gold",
+          icon: Gem,
+          gradient: "from-yellow-500/20 to-amber-500/20",
+          borderColor: "border-yellow-500/30",
+        },
+        {
+          title: "البيتكوين",
+          price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
+          change: data.btc?.change_24h?.toString() || "0",
+          unit: "دولار",
+          href: "/prices/crypto",
+          icon: Bitcoin,
+          gradient: "from-orange-500/20 to-red-500/20",
+          borderColor: "border-orange-500/30",
+        },
+      ]
+    : [];
+
   if (loading && !data) {
     return <HomeSkeleton />;
   }
@@ -199,10 +197,7 @@ export default function HomePage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-sm">
-              <Activity className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
-              
-            </div>
+            
             <button
               onClick={fetchData}
               disabled={isRefreshing}
@@ -214,7 +209,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-</div>
+
       {error && (
         <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-center animate-fadeInUp">
           <p className="text-red-500 text-sm">{error}</p>
@@ -263,7 +258,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-1 text-xs">
                     {isPositive ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />}
-                    <span className={changeColor}>التغير </span>
+                    <span className={changeColor}>التغير 24h</span>
                   </div>
                   <ArrowLeft className="absolute left-4 bottom-4 w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all group-hover:-translate-x-1" />
                 </div>
@@ -313,7 +308,7 @@ export default function HomePage() {
                 <tbody className="divide-y divide-border">
                   {data.currencies.map((c: any, idx: number) => {
                     const change = parseFloat(c.change_24h) || 0;
-                    const { color, Icon: changeIcon } = getChangeUI(change);
+                    const { color, icon: changeIcon } = getChangeUI(change, true);
                     return (
                       <tr key={c.target_currency} className="hover:bg-muted/30 transition-all duration-200 group">
                         <td className="px-5 py-3 font-medium">
@@ -326,7 +321,7 @@ export default function HomePage() {
                         </td>
                         <td className="px-5 py-3 font-mono text-sm">{formatPrice(c.buy_price, "USD")}</td>
                         <td className={`px-5 py-3 ${color} flex items-center gap-1`}>
-                        
+                          {changeIcon}
                           <span>{change > 0 ? "+" : ""}{change.toFixed(2)}%</span>
                         </td>
                       </tr>
@@ -366,8 +361,7 @@ export default function HomePage() {
         </section>
       )}
 
-   
-}
+      
 
 // ==================== Enhanced News Card ====================
 function NewsCard({ title, summary, date, slug, index }: { title: string; summary: string; date: string; slug: string; index: number }) {
