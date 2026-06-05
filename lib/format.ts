@@ -58,12 +58,14 @@ export const formatChange = (
 };
 
 export const getChangeUI = (
+export const getChangeUI = (
   change: number
 ): {
   text: string;
   color: string;
-  bg: string;           // ✅ أضفنا bg
+  bg: string;
   Icon: LucideIcon;
+  icon: JSX.Element | null; // ✅ أضفنا الخاصية icon
   isPositive: boolean;
   isNegative: boolean;
 } => {
@@ -71,7 +73,6 @@ export const getChangeUI = (
   const isPositive = change > 0;
   const isNegative = change < 0;
 
-  // تحديد لون الخلفية بناءً على الإشارة
   const bg = isPositive
     ? 'bg-green-500/10'
     : isNegative
@@ -87,6 +88,13 @@ export const getChangeUI = (
         : change < 0
         ? TrendingDown
         : Minus,
+    // ✅ أضفنا الخاصية icon التي ترجع JSX
+    icon:
+      change > 0
+        ? <TrendingUp className="w-3 h-3" />
+        : change < 0
+        ? <TrendingDown className="w-3 h-3" />
+        : null,
     isPositive,
     isNegative,
   };
