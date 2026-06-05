@@ -197,7 +197,12 @@ export default function HomePage() {
           </div>
           
           <div className="flex items-center gap-3">
-            
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-sm">
+              <Activity className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
+              <span className="text-muted-foreground">
+                {isRefreshing ? "جاري التحديث..." : `آخر تحديث منذ ${secondsSinceUpdate} ثانية`}
+              </span>
+            </div>
             <button
               onClick={fetchData}
               disabled={isRefreshing}
@@ -308,7 +313,7 @@ export default function HomePage() {
                 <tbody className="divide-y divide-border">
                   {data.currencies.map((c: any, idx: number) => {
                     const change = parseFloat(c.change_24h) || 0;
-                    const { color, icon: changeIcon } = getChangeUI(change, true);
+                    const { color, Icon: changeIcon } = getChangeUI(change);
                     return (
                       <tr key={c.target_currency} className="hover:bg-muted/30 transition-all duration-200 group">
                         <td className="px-5 py-3 font-medium">
@@ -321,7 +326,7 @@ export default function HomePage() {
                         </td>
                         <td className="px-5 py-3 font-mono text-sm">{formatPrice(c.buy_price, "USD")}</td>
                         <td className={`px-5 py-3 ${color} flex items-center gap-1`}>
-                          {changeIcon}
+                          
                           <span>{change > 0 ? "+" : ""}{change.toFixed(2)}%</span>
                         </td>
                       </tr>
@@ -361,7 +366,7 @@ export default function HomePage() {
         </section>
       )}
 
-      
+ 
 
 // ==================== Enhanced News Card ====================
 function NewsCard({ title, summary, date, slug, index }: { title: string; summary: string; date: string; slug: string; index: number }) {
@@ -418,4 +423,4 @@ function HomeSkeleton() {
       </div>
     </div>
   );
-}
+                                                                }
