@@ -62,22 +62,33 @@ export const getChangeUI = (
 ): {
   text: string;
   color: string;
+  bg: string;           // ✅ أضفنا bg
   Icon: LucideIcon;
   isPositive: boolean;
   isNegative: boolean;
 } => {
   const fmt = formatChange(change);
+  const isPositive = change > 0;
+  const isNegative = change < 0;
+
+  // تحديد لون الخلفية بناءً على الإشارة
+  const bg = isPositive
+    ? 'bg-green-500/10'
+    : isNegative
+    ? 'bg-red-500/10'
+    : 'bg-muted/30';
 
   return {
     ...fmt,
+    bg,
     Icon:
       change > 0
         ? TrendingUp
         : change < 0
         ? TrendingDown
         : Minus,
-    isPositive: change > 0,
-    isNegative: change < 0,
+    isPositive,
+    isNegative,
   };
 };
 
