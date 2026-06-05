@@ -9,7 +9,7 @@ interface HomeData {
   news: Array<{ title_ar: string; slug: string; summary: string; category: string; published_at: string }>;
 }
 
-async function getHomeData(): Promise<<HomeData> {
+async function getHomeData(): Promise<HomeData> {
   const supabase = createServerSupabase();
 
   const [
