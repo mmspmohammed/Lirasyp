@@ -136,39 +136,40 @@ export default function HomePageClient({ initialData }: Props) {
     {
       title: "الدولار / ليرة",
       price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
-      change: data.usdSyp?.change_24h ?? 0,
+      change: (data.usdSyp?.change_24h ?? 0).toString(), // ✅ string
       unit: "ل.س",
       href: "/prices/currency",
       icon: DollarSign,
       gradient: "from-blue-500/20 to-cyan-500/20",
       borderColor: "border-blue-500/30",
-      color: "primary", // ✅ أضف هاي
+      color: "primary",
     },
     {
       title: "الذهب (أونصة)",
       price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
-      change: data.gold?.change_24h ?? 0,
+      change: (data.gold?.change_24h ?? 0).toString(), // ✅ string
       unit: "دولار",
       href: "/prices/gold",
       icon: Gem,
       gradient: "from-yellow-500/20 to-amber-500/20",
       borderColor: "border-yellow-500/30",
-      color: "yellow", // ✅ أضف هاي
+      color: "yellow",
     },
     {
       title: "البيتكوين",
       price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
-      change: data.btc?.change_24h ?? 0,
+      change: (data.btc?.change_24h ?? 0).toString(), // ✅ string
       unit: "دولار",
       href: "/prices/crypto",
       icon: Bitcoin,
       gradient: "from-orange-500/20 to-red-500/20",
       borderColor: "border-orange-500/30",
-      color: "orange", // ✅ أضف هاي
+      color: "orange",
     },
   ],
   [data]
 );
+
 
   
   if (!data && loading) return <HomeSkeleton />;
