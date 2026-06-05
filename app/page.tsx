@@ -201,9 +201,7 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-sm">
               <Activity className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
-              <span className="text-muted-foreground">
-                {isRefreshing ? "جاري التحديث..." : `آخر تحديث منذ ${secondsSinceUpdate} ثانية`}
-              </span>
+              
             </div>
             <button
               onClick={fetchData}
@@ -265,7 +263,7 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-1 text-xs">
                     {isPositive ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />}
-                    <span className={changeColor}>التغير 24h</span>
+                    <span className={changeColor}>التغير </span>
                   </div>
                   <ArrowLeft className="absolute left-4 bottom-4 w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all group-hover:-translate-x-1" />
                 </div>
