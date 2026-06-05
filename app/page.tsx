@@ -18,7 +18,7 @@ interface HomeData {
 }
 
 export default function HomePage() {
-  const [data, setData] = useState<<HomeData | null>(null);
+  const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
