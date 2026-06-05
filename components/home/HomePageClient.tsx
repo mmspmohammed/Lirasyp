@@ -33,12 +33,11 @@ interface Props {
 }
 
 export default function HomePageClient({ initialData }: Props) {
-  const [data, setData] = useState<HomeData>(initialData);
+  const [data, setData] = useState<<HomeData>(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
 
-  // ✅ Client واحد ثابت طول عمر المكون
   const supabase = useMemo(() => createClient(), []);
 
   const fetchData = useCallback(async () => {
@@ -109,7 +108,6 @@ export default function HomePageClient({ initialData }: Props) {
     }
   }, [supabase]);
 
-  // ✅ Realtime فقط — شلت الـ Polling المكرر
   useEffect(() => {
     const channel = supabase
       .channel("homepage-changes")
@@ -130,48 +128,45 @@ export default function HomePageClient({ initialData }: Props) {
     };
   }, [supabase, fetchData]);
 
-  // ✅ useMemo بدل إعادة إنشاء بكل render
   const cards = useMemo(
-  () => [
-    {
-      title: "الدولار / ليرة",
-      price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
-      change: (data.usdSyp?.change_24h ?? 0).toString(), // ✅ string
-      unit: "ل.س",
-      href: "/prices/currency",
-      icon: DollarSign,
-      gradient: "from-blue-500/20 to-cyan-500/20",
-      borderColor: "border-blue-500/30",
-      color: "primary",
-    },
-    {
-      title: "الذهب (أونصة)",
-      price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
-      change: (data.gold?.change_24h ?? 0).toString(), // ✅ string
-      unit: "دولار",
-      href: "/prices/gold",
-      icon: Gem,
-      gradient: "from-yellow-500/20 to-amber-500/20",
-      borderColor: "border-yellow-500/30",
-      color: "yellow",
-    },
-    {
-      title: "البيتكوين",
-      price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
-      change: (data.btc?.change_24h ?? 0).toString(), // ✅ string
-      unit: "دولار",
-      href: "/prices/crypto",
-      icon: Bitcoin,
-      gradient: "from-orange-500/20 to-red-500/20",
-      borderColor: "border-orange-500/30",
-      color: "orange",
-    },
-  ],
-  [data]
-);
+    () => [
+      {
+        title: "الدولار / ليرة",
+        price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
+        change: (data.usdSyp?.change_24h ?? 0).toString(),
+        unit: "ل.س",
+        href: "/prices/currency",
+        icon: DollarSign,
+        gradient: "from-blue-500/20 to-cyan-500/20",
+        borderColor: "border-blue-500/30",
+        color: "primary",
+      },
+      {
+        title: "الذهب (أونصة)",
+        price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
+        change: (data.gold?.change_24h ?? 0).toString(),
+        unit: "دولار",
+        href: "/prices/gold",
+        icon: Gem,
+        gradient: "from-yellow-500/20 to-amber-500/20",
+        borderColor: "border-yellow-500/30",
+        color: "yellow",
+      },
+      {
+        title: "البيتكوين",
+        price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
+        change: (data.btc?.change_24h ?? 0).toString(),
+        unit: "دولار",
+        href: "/prices/crypto",
+        icon: Bitcoin,
+        gradient: "from-orange-500/20 to-red-500/20",
+        borderColor: "border-orange-500/30",
+        color: "orange",
+      },
+    ],
+    [data]
+  );
 
-
-  
   if (!data && loading) return <HomeSkeleton />;
 
   return (
@@ -225,8 +220,9 @@ export default function HomePageClient({ initialData }: Props) {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((card, i) => {
-            const { color: changeColor, bg: changeBg } = getChangeUI(card.change);
-            const isPositive = card.change >= 0;
+            const change = parseFloat(card.change) || 0;
+            const { color: changeColor, bg: changeBg } = getChangeUI(change);
+            const isPositive = change >= 0;
             const Icon = card.icon;
 
             return (
@@ -235,9 +231,8 @@ export default function HomePageClient({ initialData }: Props) {
                 href={card.href}
                 className={`group relative overflow-hidden rounded-2xl border ${card.borderColor} p-[1px] transition-all duration-300 hover:scale-[1.02]`}
               >
-                {/* ✅ Border gradient حقيقي بدون style attribute المعطوب */}
                 <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} rounded-2xl`} />
-                
+
                 <div className="relative h-full rounded-2xl bg-card p-5 backdrop-blur-sm transition-all duration-300 group-hover:shadow-xl">
                   <div className="flex items-start justify-between mb-4">
                     <div className={`p-2 rounded-xl bg-gradient-to-br ${card.gradient}`}>
@@ -245,7 +240,7 @@ export default function HomePageClient({ initialData }: Props) {
                     </div>
                     <div className={`px-2 py-1 rounded-full text-xs font-medium ${changeBg} ${changeColor}`}>
                       {isPositive ? "+" : ""}
-                      {card.change.toFixed(2)}%
+                      {change.toFixed(2)}%
                     </div>
                   </div>
 
@@ -264,7 +259,6 @@ export default function HomePageClient({ initialData }: Props) {
                     <span className={changeColor}>التغير 24h</span>
                   </div>
 
-                  {/* ✅ ArrowRight للـ RTL */}
                   <ArrowRight className="absolute left-4 bottom-4 w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all group-hover:-translate-x-1" />
                 </div>
               </Link>
@@ -326,8 +320,6 @@ export default function HomePageClient({ initialData }: Props) {
                           </span>
                         </td>
                         <td className="px-5 py-3 font-mono text-sm">{formatPrice(c.buy_price, "USD")}</td>
-                        
-                        {/* ✅ div جوا td بدل flex مباشر على td */}
                         <td className="px-5 py-3">
                           <div className={`flex items-center gap-1 ${changeColor}`}>
                             {isPositive ? (
