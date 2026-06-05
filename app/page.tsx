@@ -369,37 +369,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Quick Links Grid */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Zap className="w-5 h-5 text-primary" />
-          خدمات سريعة
-        </h2>
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-          {[
-            { href: "/prices/fuel", icon: "⛽", title: "المحروقات", desc: "بنزين ومازوت وغاز", color: "from-slate-500/20 to-gray-500/20" },
-            { href: "/prices/electricity", icon: "⚡", title: "الكهرباء", desc: "شرائح الاستهلاك", color: "from-yellow-500/20 to-amber-500/20" },
-            { href: "/news", icon: "📰", title: "الأخبار", desc: "اقتصادية وسورية", color: "from-blue-500/20 to-cyan-500/20" },
-            { href: "/savings", icon: "💰", title: "مدخراتي", desc: "محفظتك الشخصية", color: "from-green-500/20 to-emerald-500/20" },
-          ].map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="group rounded-2xl bg-gradient-to-br p-[1px] transition-all duration-300 hover:scale-105"
-              style={{ background: `linear-gradient(135deg, var(--primary), transparent)` }}
-            >
-              <div className="relative rounded-2xl bg-card p-5 text-center backdrop-blur-sm transition-all">
-                <span className="text-4xl block mb-3 group-hover:scale-110 transition-transform duration-300">{link.icon}</span>
-                <h3 className="font-bold text-base">{link.title}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{link.desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
+     
 
 // ==================== Enhanced News Card ====================
 function NewsCard({ title, summary, date, slug, index }: { title: string; summary: string; date: string; slug: string; index: number }) {
