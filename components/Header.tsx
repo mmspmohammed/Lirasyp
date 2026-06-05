@@ -22,7 +22,7 @@ export default function Header() {
           <div className="flex items-center gap-2">
             {/* ✅ الأيقونة هون */}
             <img
-  src="/favicon-32x32.png"
+  src="/favicon-48x48.png"
   alt="الليرة عملتنا"
   className="w-8 h-8 rounded-full ring-2 ring-primary/20"
 />
