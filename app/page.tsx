@@ -313,7 +313,7 @@ export default function HomePage() {
                 <tbody className="divide-y divide-border">
                   {data.currencies.map((c: any, idx: number) => {
                     const change = parseFloat(c.change_24h) || 0;
-                    const { color, icon: changeIcon } = getChangeUI(change, true);
+                    const { color, Icon: changeIcon } = getChangeUI(change);
                     return (
                       <tr key={c.target_currency} className="hover:bg-muted/30 transition-all duration-200 group">
                         <td className="px-5 py-3 font-medium">
