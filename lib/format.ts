@@ -57,7 +57,6 @@ export const formatChange = (
   };
 };
 
-
 export const getChangeUI = (
   change: number
 ): {
@@ -65,7 +64,7 @@ export const getChangeUI = (
   color: string;
   bg: string;
   Icon: LucideIcon;
-  icon: JSX.Element | null; // ✅ أضفنا الخاصية icon
+  icon: JSX.Element | null;
   isPositive: boolean;
   isNegative: boolean;
 } => {
@@ -82,19 +81,13 @@ export const getChangeUI = (
   return {
     ...fmt,
     bg,
-    Icon:
-      change > 0
-        ? TrendingUp
-        : change < 0
-        ? TrendingDown
-        : Minus,
-    // ✅ أضفنا الخاصية icon التي ترجع JSX
+    Icon: change > 0 ? TrendingUp : change < 0 ? TrendingDown : Minus,
     icon:
-      change > 0
-        ? <TrendingUp className="w-3 h-3" />
-        : change < 0
-        ? <TrendingDown className="w-3 h-3" />
-        : null,
+      change > 0 ? (
+        <TrendingUp className="w-3 h-3" />
+      ) : change < 0 ? (
+        <TrendingDown className="w-3 h-3" />
+      ) : null,
     isPositive,
     isNegative,
   };
