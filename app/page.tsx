@@ -328,7 +328,7 @@ export default function HomePage() {
                         </td>
                         <td className="px-5 py-3 font-mono text-sm">{formatPrice(c.buy_price, "USD")}</td>
                         <td className={`px-5 py-3 ${color} flex items-center gap-1`}>
-                          {changeIcon}
+                        
                           <span>{change > 0 ? "+" : ""}{change.toFixed(2)}%</span>
                         </td>
                       </tr>
