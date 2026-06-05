@@ -214,7 +214,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-
+</div>
       {error && (
         <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-center animate-fadeInUp">
           <p className="text-red-500 text-sm">{error}</p>
