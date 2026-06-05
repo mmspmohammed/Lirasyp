@@ -138,40 +138,42 @@ export default function HomePage() {
   }, [fetchData]);
 
   const cards = data
-    ? [
-        {
-          title: "الدولار / ليرة",
-          price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
-          change: data.usdSyp?.change_24h?.toString() || "0",
-          unit: "ل.س",
-          href: "/prices/currency",
-          icon: DollarSign,
-          gradient: "from-blue-500/20 to-cyan-500/20",
-          borderColor: "border-blue-500/30",
-        },
-        {
-          title: "الذهب (أونصة)",
-          price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
-          change: data.gold?.change_24h?.toString() || "0",
-          unit: "دولار",
-          href: "/prices/gold",
-          icon: Gem,
-          gradient: "from-yellow-500/20 to-amber-500/20",
-          borderColor: "border-yellow-500/30",
-        },
-        {
-          title: "البيتكوين",
-          price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
-          change: data.btc?.change_24h?.toString() || "0",
-          unit: "دولار",
-          href: "/prices/crypto",
-          icon: Bitcoin,
-          gradient: "from-orange-500/20 to-red-500/20",
-          borderColor: "border-orange-500/30",
-        },
-      ]
-    : [];
-
+  ? [
+      {
+        title: "الدولار / ليرة",
+        price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—",
+        change: data.usdSyp?.change_24h?.toString() || "0",
+        unit: "ل.س",
+        href: "/prices/currency",
+        icon: DollarSign,
+        gradient: "from-blue-500/20 to-cyan-500/20",
+        borderColor: "border-blue-500/30",
+        color: "primary", // ✅ تمت الإضافة
+      },
+      {
+        title: "الذهب (أونصة)",
+        price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—",
+        change: data.gold?.change_24h?.toString() || "0",
+        unit: "دولار",
+        href: "/prices/gold",
+        icon: Gem,
+        gradient: "from-yellow-500/20 to-amber-500/20",
+        borderColor: "border-yellow-500/30",
+        color: "yellow", // ✅ تمت الإضافة
+      },
+      {
+        title: "البيتكوين",
+        price: data.btc ? formatPrice(data.btc.price_usd, "USD") : "—",
+        change: data.btc?.change_24h?.toString() || "0",
+        unit: "دولار",
+        href: "/prices/crypto",
+        icon: Bitcoin,
+        gradient: "from-orange-500/20 to-red-500/20",
+        borderColor: "border-orange-500/30",
+        color: "orange", // ✅ تمت الإضافة
+      },
+    ]
+  : [];
   if (loading && !data) {
     return <HomeSkeleton />;
   }
