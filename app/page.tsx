@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { formatPrice } from "@/lib/format";
-import { Zap, ArrowLeft, DollarSign, Coins, Bitcoin } from "lucide-react";
+ import { Zap, ArrowLeft, DollarSign, Coins, Bitcoin } from "lucide-react";
 import AnimatedHeroCards from "@/components/AnimatedHeroCards";
 import LiveTickerBar from "@/components/LiveTickerBar";
 import SparklineChart from "@/components/SparklineChart";
