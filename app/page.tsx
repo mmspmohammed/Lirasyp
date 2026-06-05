@@ -196,6 +196,22 @@ export default function HomePage() {
             </p>
           </div>
           
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-sm">
+              <Activity className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
+              <span className="text-muted-foreground">
+                {isRefreshing ? "جاري التحديث..." : `آخر تحديث منذ ${secondsSinceUpdate} ثانية`}
+              </span>
+            </div>
+            <button
+              onClick={fetchData}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              تحديث
+            </button>
+          </div>
         </div>
       </div>
 
