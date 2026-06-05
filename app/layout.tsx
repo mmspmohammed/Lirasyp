@@ -7,13 +7,6 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import Header from "@/components/Header";
 import FloatingActions from "@/components/FloatingActions";
 import SwRegistration from "@/components/ServiceWorker";
-<head>
-  <link rel="icon" href="/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-  <link rel="manifest" href="/manifest.json" />
-</head>
 
 const tajawal = Tajawal({
   subsets: ["arabic"],
@@ -37,20 +30,8 @@ export const metadata: Metadata = {
     default: "LiraSYP | أسعار الصرف والذهب في سوريا",
     template: "%s | LiraSYP",
   },
-  description:
-    "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية. مصادر موثوقة، تحديث فوري، إشعارات ذكية.",
-  keywords: [
-    "ليرة سورية",
-    "دولار",
-    "سعر الصرف",
-    "ذهب",
-    "عملات رقمية",
-    "بيتكوين",
-    "سوريا",
-    "أسعار",
-    "محروقات",
-    "كهرباء",
-  ],
+  description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية. مصادر موثوقة، تحديث فوري، إشعارات ذكية.",
+  keywords: ["ليرة سورية", "دولار", "سعر الصرف", "ذهب", "عملات رقمية", "بيتكوين", "سوريا", "أسعار", "محروقات", "كهرباء"],
   authors: [{ name: "LiraSYP" }],
   creator: "LiraSYP",
   publisher: "LiraSYP",
@@ -65,48 +46,45 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  // ✅ الأيقونات هون أحسن
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
+    other: [{ rel: "manifest", url: "/manifest.json" }],
+  },
   openGraph: {
     type: "website",
     locale: "ar_SY",
     url: "https://lirasyp.sy",
     siteName: "LiraSYP",
     title: "LiraSYP | أسعار الصرف والذهب في سوريا",
-    description:
-      "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "LiraSYP - أسعار الصرف والذهب في سوريا",
-      },
-    ],
+    description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "LiraSYP - أسعار الصرف والذهب في سوريا" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "LiraSYP | أسعار الصرف والذهب في سوريا",
-    description:
-      "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
+    description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
     images: ["/og-image.png"],
     creator: "@lirasyp",
   },
-  alternates: {
-    canonical: "https://lirasyp.sy",
-  },
-  verification: {
-    google: "your-google-verification-code",
-  },
+  alternates: { canonical: "https://lirasyp.sy" },
+  verification: { google: "your-google-verification-code" },
   category: "finance",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
+        {/* ✅ الـ metadata بيدير الأيقونات تلقائياً، بس الـ manifest لازم يكون هون */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0ea5e9" />
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -115,16 +93,12 @@ export default function RootLayout({
               "@type": "WebSite",
               name: "LiraSYP",
               url: "https://lirasyp.sy",
-              description:
-                "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
+              description: "تتبع لحظي لأسعار الدولار والليرة السورية والذهب والعملات الرقمية.",
               inLanguage: "ar",
               publisher: {
                 "@type": "Organization",
                 name: "LiraSYP",
-                logo: {
-                  "@type": "ImageObject",
-                  url: "https://lirasyp.sy/logo.png",
-                },
+                logo: { "@type": "ImageObject", url: "https://lirasyp.sy/logo.png" },
               },
               potentialAction: {
                 "@type": "SearchAction",
@@ -147,10 +121,7 @@ export default function RootLayout({
               name: "LiraSYP",
               url: "https://lirasyp.sy",
               logo: "https://lirasyp.sy/logo.png",
-              sameAs: [
-                "https://twitter.com/lirasyp",
-                "https://facebook.com/lirasyp",
-              ],
+              sameAs: ["https://twitter.com/lirasyp", "https://facebook.com/lirasyp"],
               contactPoint: {
                 "@type": "ContactPoint",
                 email: "contact@lirasyp.sy",
@@ -165,9 +136,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://awvlqxxwktqtlobhvqwh.supabase.co" />
       </head>
-      <body
-        className={`${tajawal.variable} font-sans bg-background text-foreground antialiased`}
-      >
+      <body className={`${tajawal.variable} font-sans bg-background text-foreground antialiased`}>
         <SwRegistration />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <div className="flex min-h-screen flex-col">
@@ -183,31 +152,28 @@ export default function RootLayout({
                       نقدم بيانات دقيقة ومحدثة من مصادر موثوقة.
                     </p>
                   </div>
-                  
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold">روابط سريعة</h3>
+                    <ul className="space-y-2 text-sm">
+                      <li><a href="/prices/currency" className="text-muted-foreground hover:text-primary transition">💵 أسعار العملات</a></li>
+                      <li><a href="/prices/gold" className="text-muted-foreground hover:text-primary transition">🥇 أسعار الذهب</a></li>
+                      <li><a href="/prices/crypto" className="text-muted-foreground hover:text-primary transition">₿ العملات الرقمية</a></li>
+                      <li><a href="/news" className="text-muted-foreground hover:text-primary transition">📰 الأخبار الاقتصادية</a></li>
+                    </ul>
+                  </div>
                   <div>
                     <h3 className="mb-3 text-lg font-bold">معلومات</h3>
                     <ul className="space-y-2 text-sm">
-                      <li>
-                        <a href="/about" className="text-muted-foreground hover:text-primary transition">
-                          عن الموقع
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/privacy" className="text-muted-foreground hover:text-primary transition">
-                          سياسة الخصوصية
-                        </a>
-                      </li>
-                      <li>
-                        <a href="/terms" className="text-muted-foreground hover:text-primary transition">
-                          شروط الاستخدام
-                        </a>
-                      </li>
+                      <li><a href="/about" className="text-muted-foreground hover:text-primary transition">عن الموقع</a></li>
+                      <li><a href="/privacy" className="text-muted-foreground hover:text-primary transition">سياسة الخصوصية</a></li>
+                      <li><a href="/terms" className="text-muted-foreground hover:text-primary transition">شروط الاستخدام</a></li>
                     </ul>
                   </div>
                 </div>
                 <div className="mt-8 border-t border-border pt-4 text-center text-sm text-muted-foreground">
-                  <p>الليرة عملتنا 2025-2026 created by E: Mohammed</p>
-                 
+                  <p>الليرة عملتنا 2025-2026</p>
+                  <p className="mt-1">created by E: Mohammed</p>
+                  <p className="mt-2">⚠️ الأسعار للأغراض الإعلامية فقط وقد تختلف عن السوق الفعلي.</p>
                 </div>
               </div>
             </footer>
