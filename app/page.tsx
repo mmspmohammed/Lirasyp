@@ -8,11 +8,10 @@ import { formatPrice, getChangeUI } from "@/lib/format";
 import { 
   TrendingUp, TrendingDown, Newspaper, Zap, ArrowLeft, 
   Loader2, DollarSign, BarChart3, Sparkles, 
-  Activity, Coins, Gem, Bitcoin, Wallet, BellRing, BellOff
+  Activity, Coins, Gem, Bitcoin, Wallet, BellRing
 } from "lucide-react";
 import PriceCardsCarousel from "@/components/PriceCardsCarousel";
-
-// باقي الواجهات والدوال المساعدة كما هي (لا تغيير)
+import NotificationModal from "@/components/NotificationModal"; // ✅ استيراد المودال
 
 interface HomeData {
   usdSyp: any;
@@ -26,55 +25,10 @@ export default function HomePage() {
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSubscribing, setIsSubscribing] = useState(false);
-
-  // دالة تفعيل الإشعارات
-  const handleSubscribe = async () => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
-      alert("متصفحك لا يدعم الإشعارات");
-      return;
-    }
-    setIsSubscribing(true);
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        alert("لتفعيل الإشعارات، يرجى السماح من المتصفح");
-        return;
-      }
-      const registration = await navigator.serviceWorker.ready;
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidKey) {
-        console.error("VAPID key missing");
-        return;
-      }
-      const newSub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      });
-      // حفظ الاشتراك في الخادم
-      const json = newSub.toJSON();
-      await fetch("/api/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: newSub.endpoint,
-          auth: json.keys?.auth,
-          p256dh: json.keys?.p256dh,
-          user_agent: navigator.userAgent,
-        }),
-      });
-      alert("✅ تم تفعيل الإشعارات بنجاح!");
-    } catch (err) {
-      console.error(err);
-      alert("حدث خطأ أثناء تفعيل الإشعارات");
-    } finally {
-      setIsSubscribing(false);
-    }
-  };
+  const [notifOpen, setNotifOpen] = useState(false); // ✅ حالة فتح المودال
 
   // دوال جلب البيانات (نفس الكود السابق)
   const fetchData = useCallback(async () => {
-    // ... نفس الكود السابق ...
     try {
       const supabase = createClient();
       const { data: usdSyp } = await supabase
@@ -154,7 +108,6 @@ export default function HomePage() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
 
-  // تعريف الكاردات (نفس السابق)
   const cards = data ? [
     { title: "الدولار / ليرة", price: data.usdSyp ? formatPrice(data.usdSyp.sell_price, "SYP") : "—", change: data.usdSyp?.change_24h?.toString() || "0", unit: "ل.س", href: "/prices/currency", icon: DollarSign, gradient: "from-blue-500/20 to-cyan-500/20", borderColor: "border-blue-500/30", color: "primary" },
     { title: "الذهب (أونصة)", price: data.gold ? formatPrice(data.gold.price_usd, "USD") : "—", change: data.gold?.change_24h?.toString() || "0", unit: "دولار", href: "/prices/gold", icon: Gem, gradient: "from-yellow-500/20 to-amber-500/20", borderColor: "border-yellow-500/30", color: "yellow" },
@@ -165,7 +118,7 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-12">
-      {/* Hero Section مع زر تفعيل الإشعارات بدلاً من التحديث */}
+      {/* Hero Section مع زر تفعيل الإشعارات يفتح المودال */}
       <div className="relative rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 md:p-8 overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
@@ -183,13 +136,12 @@ export default function HomePage() {
             </p>
           </div>
           
-          {/* زر تفعيل الإشعارات */}
+          {/* زر يفتح مودال الإشعارات */}
           <button
-            onClick={handleSubscribe}
-            disabled={isSubscribing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 disabled:opacity-50"
+            onClick={() => setNotifOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-red-500 text-white font-medium hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
           >
-            {isSubscribing ? <Loader2 className="w-5 h-5 animate-spin" /> : <BellRing className="w-5 h-5" />}
+            <BellRing className="w-5 h-5" />
             تفعيل الإشعارات
           </button>
         </div>
@@ -202,7 +154,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* باقي الأقسام كما هي (أبرز الأسعار، carousel، جدول العملات، الأخبار) */}
+      {/* أبرز الأسعار */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold flex items-center gap-2"><BarChart3 className="w-5 h-5 text-primary" /> أبرز الأسعار</h2>
@@ -232,6 +184,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Carousel */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold flex items-center gap-2"><Coins className="w-5 h-5 text-primary" /> أسعار العملات العالمية</h2>
@@ -240,6 +193,7 @@ export default function HomePage() {
         <PriceCardsCarousel cards={cards.slice(0, 3)} />
       </section>
 
+      {/* جدول العملات */}
       {data?.currencies && data.currencies.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -271,6 +225,7 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* الأخبار */}
       {data?.news && data.news.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -284,11 +239,14 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Modal الإشعارات */}
+      <NotificationModal open={notifOpen} onClose={() => setNotifOpen(false)} />
     </div>
   );
 }
 
-// دوال مساعدة (NewsCard, HomeSkeleton, urlBase64ToUint8Array)
+// مكونات مساعدة (NewsCard و HomeSkeleton كما هي)
 function NewsCard({ title, summary, date, slug, index }: { title: string; summary: string; date: string; slug: string; index: number }) {
   return (
     <Link href={`/news/${slug}`} className="group block">
@@ -311,12 +269,3 @@ function HomeSkeleton() {
     </div>
   );
 }
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-      }
