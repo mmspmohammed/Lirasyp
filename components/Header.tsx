@@ -1,4 +1,5 @@
-"use client";
+// components/Header.tsx
+'use client';
 
 import { Menu, Sun, Moon } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -12,9 +13,6 @@ export default function Header() {
 
   useEffect(() => {
     setMounted(true);
-    const handler = () => setDrawerOpen(true);
-    window.addEventListener('toggle-drawer', handler);
-    return () => window.removeEventListener('toggle-drawer', handler);
   }, []);
 
   return (
@@ -22,7 +20,13 @@ export default function Header() {
       <header className="sticky top-0 z-40 w-full bg-card/95 backdrop-blur border-b border-muted">
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xl" aria-hidden="true"></span>
+            {/* ✅ الأيقونة هون */}
+            <img
+  src="/favicon-32x32.png"
+  alt="الليرة عملتنا"
+  className="w-8 h-8 rounded-full ring-2 ring-primary/20"
+/>
+
             <h1 className="font-bold text-lg tracking-tight">الليرة عملتنا</h1>
           </div>
           <div className="flex items-center gap-2">
