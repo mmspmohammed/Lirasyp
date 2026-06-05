@@ -196,22 +196,6 @@ export default function HomePage() {
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border text-sm">
-              <Activity className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
-              <span className="text-muted-foreground">
-                {isRefreshing ? "جاري التحديث..." : `آخر تحديث منذ ${secondsSinceUpdate} ثانية`}
-              </span>
-            </div>
-            <button
-              onClick={fetchData}
-              disabled={isRefreshing}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-              تحديث
-            </button>
-          </div>
         </div>
       </div>
 
@@ -278,7 +262,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Coins className="w-5 h-5 text-primary" />
-            أسعار العملات العالمية
+            أسعار العملات 
           </h2>
           <Link href="/prices/currency" className="text-sm text-primary hover:underline flex items-center gap-1">
             عرض الكل <ArrowLeft className="w-4 h-4" />
@@ -326,7 +310,7 @@ export default function HomePage() {
                         </td>
                         <td className="px-5 py-3 font-mono text-sm">{formatPrice(c.buy_price, "USD")}</td>
                         <td className={`px-5 py-3 ${color} flex items-center gap-1`}>
-                          
+                          {changeIcon}
                           <span>{change > 0 ? "+" : ""}{change.toFixed(2)}%</span>
                         </td>
                       </tr>
@@ -345,7 +329,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold flex items-center gap-2">
               <Newspaper className="w-5 h-5 text-primary" />
-              آخر الأخبار 
+              آخر الأخبار الاقتصادية
             </h2>
             <Link href="/news" className="text-sm text-primary hover:underline flex items-center gap-1">
               جميع الأخبار <ArrowLeft className="w-4 h-4" />
@@ -366,7 +350,6 @@ export default function HomePage() {
         </section>
       )}
 
- 
 
 // ==================== Enhanced News Card ====================
 function NewsCard({ title, summary, date, slug, index }: { title: string; summary: string; date: string; slug: string; index: number }) {
@@ -423,4 +406,4 @@ function HomeSkeleton() {
       </div>
     </div>
   );
-                                                                }
+          }
