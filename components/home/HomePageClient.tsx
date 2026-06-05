@@ -33,7 +33,7 @@ interface Props {
 }
 
 export default function HomePageClient({ initialData }: Props) {
-  const [data, setData] = useState<<HomeData>(initialData);
+  const [data, setData] = useState<HomeData>(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
