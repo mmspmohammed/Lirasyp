@@ -57,7 +57,7 @@ export const formatChange = (
   };
 };
 
-export const getChangeUI = (
+
 export const getChangeUI = (
   change: number
 ): {
